@@ -1,0 +1,22 @@
+import os
+
+from tgm.agents.TemporalGaussianMixture import TemporalGaussianMixture
+from tgm.environments.MazeEnv import MazeEnv
+
+
+def run(path, max_episode_length=50):
+
+    # Create the maze environment.
+    env = MazeEnv(path, max_episode_length)
+
+    # Create the temporal Gaussian mixture agent.
+    tgm = TemporalGaussianMixture()
+
+    # Train the agent on the environment.
+    tgm.train(env)
+
+
+if __name__ == '__main__':
+    maze_index = 8
+    maze_path = os.path.join(os.environ["DATA_DIRECTORY"], "mazes", f"maze_{maze_index}.txt")
+    run(maze_path)
