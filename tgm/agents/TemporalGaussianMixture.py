@@ -64,10 +64,10 @@ class TemporalGaussianMixture:
         # TODO
         return random.randint(0, self.n_actions - 1)
 
-    def learn(self, debugger):
+    def learn(self, debugger, force_initialize=False):
 
         # The first time the function is called, initialize the Gaussian mixture.
-        if not self.gm.is_initialized():
+        if force_initialize or not self.gm.is_initialized():
             x = self.gm_data.get()
             self.gm.initialize(x)
             if debugger is not None:

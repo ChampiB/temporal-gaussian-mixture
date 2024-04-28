@@ -6,7 +6,7 @@ from tgm.agents.models.display.MatPlotLib import MatPlotLib
 
 class KMeans:
     """
-    Implement the K-means algorithm taking random each action.
+    Implement the K-means algorithm.
     """
 
     @staticmethod

@@ -4,6 +4,7 @@ from tgm.agents.datasets.Dataset import Dataset
 from tgm.agents.models.display.MatPlotLib import MatPlotLib
 from tgm.agents.models.inference.KMeans import KMeans
 from tgm.agents.models.inference.GaussianMixture import GaussianMixture as GMix
+from tgm.agents.models.inference.MeanShift import MeanShift
 
 
 class GaussianMixtureModel:
@@ -99,10 +100,14 @@ class GaussianMixtureModel:
     def is_initialized(self):
         return self.W is not None
 
-    def initialize(self, x):
+    def initialize(self, x, init_type="mean-shift"):
 
         # Initialize the prior parameters and the responsibilities using the k-means algorithm.
-        self.v, self.d, self.β, self.m, self.W, self.r_hat = KMeans.init_gm(x, self.n_observations, self.n_states)
+        init_fc = {
+            "k-means": KMeans.init_gm,
+            "mean-shift": MeanShift.init_gm
+        }
+        self.v, self.d, self.β, self.m, self.W, self.r_hat = init_fc[init_type](x, self.n_observations, self.n_states)
 
         # Initialize the empirical prior parameters.
         self.v_bar, self.d_bar, self.β_bar, self.m_bar, self.W_bar = GMix.clone(self.v, self.d, self.β, self.m, self.W)

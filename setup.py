@@ -21,7 +21,8 @@ setup(
         "pydot",
         "pytest==7.3.1",
         "customtkinter==0.3"
-        "screeninfo"
+        "screeninfo",
+        "scikit-learn"
     ],
     python_requires="~=3.9",
     classifiers=[
