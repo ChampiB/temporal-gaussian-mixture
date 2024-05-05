@@ -59,10 +59,12 @@ class FixedComponentsTool(ctk.CTkFrame):
         self.matrix_labels = [tk.Label(self, image=matrix_image) for matrix_image in self.matrix_images]
 
         if selected is not None:
-            prev_gm, next_gm = selected
-            self.update_content(debugger.gms, debugger.xs, int(prev_gm), int(next_gm))
+            prev_gm, next_gm, fit_id = selected
+            self.update_content(
+                debugger.gms, debugger.xs, debugger.init_params, int(prev_gm), int(next_gm), int(fit_id)
+            )
 
-    def update_content(self, gms, xs, prev_gm, next_gm):
+    def update_content(self, gms, xs, init_params, prev_gm, next_gm, fit_id):
 
         # Remove the initial text, and display the images instead.
         if self.selection_label.winfo_viewable():
@@ -115,8 +117,8 @@ class FixedComponentsTool(ctk.CTkFrame):
     def compute_kl_matrix(gm0, gm1):
         matrix = torch.zeros([len(gm0.m_hat), len(gm1.m_hat)])
         mask = torch.zeros([len(gm0.m_hat), len(gm1.m_hat)])
-        ks1 = gm1.active_components
         ks0 = gm0.active_components
+        ks1 = gm1.active_components
         for i0 in range(len(gm0.m_hat)):
             precision0 = gm0.W_hat[i0] * gm0.v_hat[i0]
             for i1 in range(len(gm1.m_hat)):

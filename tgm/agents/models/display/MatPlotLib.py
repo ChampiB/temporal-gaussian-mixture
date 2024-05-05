@@ -195,6 +195,41 @@ class MatPlotLib:
         return fig
 
     @staticmethod
+    def draw_data_points(data, title=""):
+
+        # Create a figure and the list of colors.
+        fig = plt.figure()
+        plt.gca().set_title(title)
+
+        # Draw the data points of t = 0.
+        x = [x_tensor[0] for x_tensor in data]
+        y = [x_tensor[1] for x_tensor in data]
+        plt.gca().scatter(x=x, y=y, c="gray")
+
+        # Return the figure.
+        return fig
+
+    @staticmethod
+    def draw_ellipses(
+        data, active_components, params, all_colors, title="", active_only=True, display_ids=False, counts=None
+    ):
+
+        # Create a figure and the list of colors.
+        fig = plt.figure()
+        plt.gca().set_title(title)
+
+        # Draw the data points of t = 0.
+        x = [x_tensor[0] for x_tensor in data]
+        y = [x_tensor[1] for x_tensor in data]
+        plt.gca().scatter(x=x, y=y, c="gray")
+
+        # Display the ellipses in the figure.
+        MatPlotLib.make_ellipses(active_components, params, all_colors, active_only, display_ids, counts)
+
+        # Return the figure.
+        return fig
+
+    @staticmethod
     def make_ellipses(active_components, params, all_colors, active_only=True, display_ids=False, counts=None):
 
         m_hat, _, v_hat, W_hat = params

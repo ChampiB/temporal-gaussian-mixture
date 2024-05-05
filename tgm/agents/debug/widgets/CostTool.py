@@ -30,10 +30,12 @@ class CostTool(ctk.CTkFrame):
         self.vfe_image = PhotoImage(empty_image)
         self.label = tk.Label(self, image=self.vfe_image)
         if selected is not None:
-            prev_gm, next_gm = selected
-            self.update_content(debugger.gms, debugger.xs, int(prev_gm), int(next_gm))
+            prev_gm, next_gm, fit_id = selected
+            self.update_content(
+                debugger.gms, debugger.xs, debugger.init_params, int(prev_gm), int(next_gm), int(fit_id)
+            )
 
-    def update_content(self, gms, xs, prev_gm, next_gm):
+    def update_content(self, gms, xs, init_params, prev_gm, next_gm, fit_id):
 
         # Remove the initial text, and display the images instead.
         if self.selection_label.winfo_viewable():

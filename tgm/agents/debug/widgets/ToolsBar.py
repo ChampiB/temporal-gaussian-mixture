@@ -29,3 +29,9 @@ class ToolsBar:
             command=partial(update_tool, name="fixed_components")
         )
         components_button.grid(row=3, column=0, padx=padding, pady=(padding, 0))
+
+        initialization_button = ctk.CTkButton(
+            parent, text="I", width=size, height=size, corner_radius=0, font=font,
+            command=partial(update_tool, name="initialization")
+        )
+        initialization_button.grid(row=4, column=0, padx=padding, pady=(padding, 0))

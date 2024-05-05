@@ -1,5 +1,4 @@
 import torch
-from torch import matmul
 
 from tgm.agents.datasets.Dataset import Dataset
 from tgm.agents.models.display.MatPlotLib import MatPlotLib
@@ -120,29 +119,40 @@ class GaussianMixtureModel:
     def is_initialized(self):
         return self.W is not None
 
-    def initialize(self, x, init_type="mean-shift"):
+    def initialize(self, x, init_type="mean-shift", debugger=None):
 
         # Retrieve the parameters of the fixed components.
-        v = d = β = m = W = None
-        x_flexible = x
-        if len(self.fixed_components) != 0:
-            v, d, β, m, W = self.parameters_of(self.fixed_components)
-            r_hat = self.compute_responsibilities(x)
-            x_flexible = self.not_data_of(x, r_hat.argmax(dim=1), self.fixed_components)
+        v, d, β, m, W = self.parameters_of(self.fixed_components)
 
-        # Compute the prior parameters and the responsibilities using the k-means or mean-shift algorithms.
-        if x_flexible is None:
-            self.v, self.d, self.β, self.m, self.W = v, d, β, m, W
-        else:
-            init_fc = {
-                "k-means": KMeans.init_gm,
-                "mean-shift": MeanShift.init_gm
-            }
-            self.v, self.d, self.β, self.m, self.W, self.r_hat = \
-                init_fc[init_type](x_flexible, self.n_observations, self.n_states)
-            if v is not None:
-                self.v, self.d, self.β, self.m, self.W = \
-                    self.merge(v, d, β, m, W, self.v, self.d, self.β, self.m, self.W)
+        # Log fixed component parameters and data.
+        if debugger is not None:
+            debugger.initialization_fixed(v, d, β, m, W)
+
+        # Compute all the component parameters.
+        init_fc = {
+            "k-means": KMeans.init_gm,
+            "mean-shift": MeanShift.init_gm
+        }
+        self.v, self.d, self.β, self.m, self.W, self.r_hat = \
+            init_fc[init_type](x, self.n_observations, self.n_states)
+
+        # Retrieve the parameters of the flexible components.
+        fixed_components = self.fixed_gaussian.new_indices_of(v, m, W, self.v, self.m, self.W)
+        flexible_components = [k for k in range(len(self.m)) if k not in fixed_components]
+        self.v, self.d, self.β, self.m, self.W = self.parameters_of(flexible_components)
+
+        # Log flexible component parameters and data.
+        if debugger is not None:
+            debugger.initialization_flexible(self.v, self.d, self.β, self.m, self.W)
+
+        # Merge the parameters of the fixed and flexible components.
+        if v is not None:
+            self.v, self.d, self.β, self.m, self.W = \
+                self.merge(v, d, β, m, W, self.v, self.d, self.β, self.m, self.W)
+
+        # Log all component parameters and data.
+        if debugger is not None:
+            debugger.initialization_combined(self.v, self.d, self.β, self.m, self.W)
 
         # Initialize the empirical prior parameters.
         self.v_bar, self.d_bar, self.β_bar, self.m_bar, self.W_bar = GMix.clone(self.v, self.d, self.β, self.m, self.W)
@@ -159,31 +169,27 @@ class GaussianMixtureModel:
         self.S = GMix.S(x, self.r_hat, self.N, self.x_bar)
         self.vfe = GMix.vfe(self)
 
-    def not_data_of(self, x, r_star, components, threshold=10):
-        data = []
-        for i in range(x.shape[0]):
-            if r_star[i] in components:
-                datum = x[i].unsqueeze(dim=0)
-                if self.mahalanobis_distance(x[i], r_star[i]) > threshold:
-                    data.append(datum)
-        if len(data) == 0:
-            return None
-        return torch.concat(data, dim=0)
-
-    def mahalanobis_distance(self, x, i):
-        diff = (x - self.m_hat[i])
-        return matmul(diff.t(), matmul(self.W_hat[i] * self.v_hat[i], diff))
-
     @staticmethod
     def merge(v0, d0, β0, m0, W0, v1, d1, β1, m1, W1):
-        v0 = torch.concat([v0, v1], dim=0)
-        d0 = torch.concat([d0, d1], dim=0)
-        β0 = torch.concat([β0, β1], dim=0)
-        m0.extend(m1)
-        W0.extend(W1)
-        return v0, d0, β0, m0, W0
 
-    def parameters_of(self, fixed_components, d="prior"):
+        # If any set of parameters are None, return the other set.
+        if v1 is None or d1 is None or β1 is None or m1 is None or W1 is None:
+            return v0, d0, β0, m0, W0
+        if v0 is None or d0 is None or β0 is None or m0 is None or W0 is None:
+            return v1, d1, β1, m1, W1
+
+        # Otherwise, merge the two sets of parameters.
+        v = torch.concat([v0, v1], dim=0)
+        d = torch.concat([d0, d1], dim=0)
+        β = torch.concat([β0, β1], dim=0)
+        m = m0 + m1
+        W = W0 + W1
+        return v, d, β, m, W
+
+    def parameters_of(self, components, d="prior"):
+
+        if len(components) == 0:
+            return None, None, None, None, None
 
         # Retrieve all the parameters of interest.
         if d == "prior":
@@ -196,20 +202,20 @@ class GaussianMixtureModel:
             raise RuntimeError(f"Unsupported distribution type '{d}'.")
 
         # Extract the parameters of the fixed components.
-        n_states = len(fixed_components)
-        v_fixed = torch.zeros([n_states])
-        d_fixed = torch.zeros([n_states])
-        β_fixed = torch.zeros([n_states])
-        m_fixed = []
-        W_fixed = []
-        for j, fixed_component in enumerate(fixed_components):
-            v_fixed[j] = v[fixed_component]
-            d_fixed[j] = d[fixed_component]
-            β_fixed[j] = β[fixed_component]
-            m_fixed.append(m[fixed_component].clone())
-            W_fixed.append(W[fixed_component].clone())
+        n_states = len(components)
+        extracted_v = torch.zeros([n_states])
+        extracted_d = torch.zeros([n_states])
+        extracted_β = torch.zeros([n_states])
+        extracted_m = []
+        extracted_W = []
+        for j, component in enumerate(components):
+            extracted_v[j] = v[component]
+            extracted_d[j] = d[component]
+            extracted_β[j] = β[component]
+            extracted_m.append(m[component].clone())
+            extracted_W.append(W[component].clone())
 
-        return v_fixed, d_fixed, β_fixed, m_fixed, W_fixed
+        return extracted_v, extracted_d, extracted_β, extracted_m, extracted_W
 
     def update_fixed_components(self):
         self.fixed_gaussian.update(self)

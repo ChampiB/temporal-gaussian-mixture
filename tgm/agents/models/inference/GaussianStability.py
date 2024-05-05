@@ -1,3 +1,4 @@
+import math
 from copy import deepcopy
 
 import torch
@@ -61,6 +62,31 @@ class GaussianStability:
                     break
 
         return fixed_n_steps_1, fixed_components_1
+
+    def new_indices_of(self, v0, m0, W0, v1, m1, W1):
+        if v0 is None or m0 is None or W0 is None:
+            return []
+
+        new_indices = []
+        for k in range(v0.shape[0]):
+            precision0 = W0[k] * v0[k]
+
+            min_kl = math.inf
+            min_index = -1
+            for j in range(v1.shape[0]):
+                precision1 = W1[j] * v1[j]
+
+                # Save the smallest KL-divergence.
+                kl = self.kl_gaussian(m0[k], precision0, m1[j], precision1)
+                if kl < min_kl:
+                    min_kl = kl
+                    min_index = j
+
+            # Add the index corresponding to the smallest KL-divergence.
+            if min_index != -1 and min_kl < self.kl_threshold:
+                new_indices.append(min_index)
+
+        return new_indices
 
     @staticmethod
     def kl_gaussian(m0, precision0, m1, precision1):

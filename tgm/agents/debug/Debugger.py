@@ -7,6 +7,7 @@ import matplotlib as mpl
 from tgm.agents.debug.widgets.CostTool import CostTool
 from tgm.agents.debug.widgets.DistributionsTool import DistributionsTool
 from tgm.agents.debug.widgets.FixedComponentsTool import FixedComponentsTool
+from tgm.agents.debug.widgets.InitializationTool import InitializationTool
 from tgm.agents.debug.widgets.ParametersTool import ParametersTool
 from tgm.agents.debug.widgets.ToolsBar import ToolsBar
 from tgm.agents.debug.widgets.TreeView import TreeView
@@ -33,6 +34,7 @@ class Debugger:
         self.gms = []
         self.xs = []
         self.data = []
+        self.init_params = []
 
         # Create a variable that will contain the tkinter window and the navigation tree.
         self.root = None
@@ -48,13 +50,15 @@ class Debugger:
             "distributions": DistributionsTool,
             "parameters": ParametersTool,
             "vfe": CostTool,
-            "fixed_components": FixedComponentsTool
+            "fixed_components": FixedComponentsTool,
+            "initialization": InitializationTool
         }
         self.tool_instances = {
             "distributions": None,
             "parameters": None,
             "vfe": None,
-            "fixed_components": None
+            "fixed_components": None,
+            "initialization": None
         }
         self.current_tool_name = "distributions"
         self.current_tool = None
@@ -109,13 +113,13 @@ class Debugger:
         self.current_tool_name = name
 
     def update_current_tool(self, tags):
-        prev_gm, next_gm = tags
-        self.current_tool.update_content(self.gms, self.xs, int(prev_gm), int(next_gm))
+        prev_gm, next_gm, fit_id = tags
+        self.current_tool.update_content(self.gms, self.xs, self.init_params, int(prev_gm), int(next_gm), int(fit_id))
 
     def after_fit(self):
         self.current_fit += 1
         self.current_step = 0
-        data = (f"fit_{self.current_fit}", (self.gm_prev_fit, self.gm_prev_update))
+        data = (f"fit_{self.current_fit}", (self.gm_prev_fit, self.gm_prev_update, self.current_fit - 1))
         self.data.insert(self.current_fit - 1, data)
         self.gm_prev_fit = self.gm_prev_update
 
@@ -145,15 +149,30 @@ class Debugger:
         # Add the vi-step to the data, if needed.
         step_iid = f"fit_{self.current_fit + 1}.vi_step_{self.current_step}"
         if self.current_update == 0:
-            self.data.append((step_iid, (self.gm_prev_step, self.gm_prev_step + 3)))
+            self.data.append((step_iid, (self.gm_prev_step, self.gm_prev_step + 3, self.current_fit - 1)))
             self.gm_prev_step += 3
 
         # Add the vi-update to the list.
         update_text = ["update_Z", "update_D", "update_μ_and_Λ"][self.current_update % 3]
         update_iid = f"{step_iid}.{update_text}"
-        self.data.append((update_iid, (self.gm_prev_update, self.gm_prev_update + 1)))
+        self.data.append((update_iid, (self.gm_prev_update, self.gm_prev_update + 1, self.current_fit - 1)))
         self.current_update = (self.current_update + 1) % 3
         self.gm_prev_update += 1
 
     def update_last_gm(self):
         self.gms[-1] = self.model.gm.clone()
+
+    def initialization_fixed(self, v, d, β, m, W, new_entry=True):
+        if new_entry is True:
+            self.init_params.append({})
+        self.init_params[-1]["fixed"] = (v, d, β, m, W)
+
+    def initialization_flexible(self, v, d, β, m, W, new_entry=False):
+        if new_entry is True:
+            self.init_params.append({})
+        self.init_params[-1]["flexible"] = (v, d, β, m, W)
+
+    def initialization_combined(self, v, d, β, m, W, new_entry=False):
+        if new_entry is True:
+            self.init_params.append({})
+        self.init_params[-1]["combined"] = (v, d, β, m, W)

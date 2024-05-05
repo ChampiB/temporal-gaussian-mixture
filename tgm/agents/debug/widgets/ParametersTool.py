@@ -24,10 +24,12 @@ class ParametersTool(ctk.CTkFrame):
         # Create the shell.
         self.shell = Shell(parent, self, debugger)
         if selected is not None:
-            prev_gm, next_gm = selected
-            self.update_content(debugger.gms, debugger.xs, int(prev_gm), int(next_gm))
+            prev_gm, next_gm, fit_id = selected
+            self.update_content(
+                debugger.gms, debugger.xs, debugger.init_params, int(prev_gm), int(next_gm), int(fit_id)
+            )
 
-    def update_content(self, gms, xs, prev_gm, next_gm):
+    def update_content(self, gms, xs, init_params, prev_gm, next_gm, fit_id):
 
         # Remove the initial text, and display the images instead.
         if self.selection_label.winfo_viewable():

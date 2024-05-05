@@ -69,7 +69,7 @@ class TemporalGaussianMixture:
         # The first time the function is called, initialize the Gaussian mixture.
         if force_initialize or not self.gm.is_initialized():
             x = self.gm_data.get()
-            self.gm.initialize(x)
+            self.gm.initialize(x, debugger=debugger)
             if debugger is not None:
                 debugger.after_initialize()
 
