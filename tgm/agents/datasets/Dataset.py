@@ -46,7 +46,6 @@ class Dataset:
     def update_forgettable_set(self, gm):
 
         # Compute the most likely components for each observation.
-
         r_hat = gm.compute_responsibilities(self.observations)
         z = r_hat.argmax(dim=1)
 

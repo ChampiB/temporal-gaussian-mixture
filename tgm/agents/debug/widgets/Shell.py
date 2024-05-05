@@ -1,3 +1,4 @@
+import torch
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import tkinter as tk
 import customtkinter as ctk
@@ -175,6 +176,11 @@ class Shell(ctk.CTkFrame):
 
     def display_tensor(self, x, tensor_name="result"):
 
+        # Convert list into tensor.
+        if isinstance(x, list):
+            if len(x) == 0 or (len(x) > 0 and not isinstance(x[0], torch.Tensor)):
+                x = torch.tensor(x)
+
         # Check that the size of the tensor is correct.
         len_shape = len([len(x)] + [s for s in x[0].shape] if isinstance(x, list) else x.shape)
         if 3 < len_shape < 1:
@@ -204,6 +210,8 @@ class Shell(ctk.CTkFrame):
         :return: the formatted matrix
         """
         n_rows, n_cols = matrix.shape
+        if n_rows == 0 or n_cols == 0:
+            return "[]"
         rows = []
         for row_id in range(n_rows):
             row = " & ".join([f"{matrix[row_id, col_id].item():0.3f}" for col_id in range(n_cols)])
@@ -284,6 +292,7 @@ class Shell(ctk.CTkFrame):
             "N0_second": self.debugger.gms[self.prev_gm].N_second,
             "x0_second": self.debugger.gms[self.prev_gm].x_second,
             "S0_second": self.debugger.gms[self.prev_gm].S_second,
+            "gm0": self.debugger.gms[self.prev_gm],
             "x1": self.debugger.xs[self.next_gm],
             "W1": self.debugger.gms[self.next_gm].W,
             "m1": self.debugger.gms[self.next_gm].m,
@@ -307,7 +316,8 @@ class Shell(ctk.CTkFrame):
             "S1_prime": self.debugger.gms[self.next_gm].S_prime,
             "N1_second": self.debugger.gms[self.next_gm].N_second,
             "x1_second": self.debugger.gms[self.next_gm].x_second,
-            "S1_second": self.debugger.gms[self.next_gm].S_second
+            "S1_second": self.debugger.gms[self.next_gm].S_second,
+            "gm1": self.debugger.gms[self.next_gm]
         }
         functions = {
             "near": self.near

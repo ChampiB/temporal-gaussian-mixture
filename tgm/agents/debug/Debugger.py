@@ -6,6 +6,7 @@ import matplotlib as mpl
 
 from tgm.agents.debug.widgets.CostTool import CostTool
 from tgm.agents.debug.widgets.DistributionsTool import DistributionsTool
+from tgm.agents.debug.widgets.FixedComponentsTool import FixedComponentsTool
 from tgm.agents.debug.widgets.ParametersTool import ParametersTool
 from tgm.agents.debug.widgets.ToolsBar import ToolsBar
 from tgm.agents.debug.widgets.TreeView import TreeView
@@ -46,12 +47,14 @@ class Debugger:
         self.tools = {
             "distributions": DistributionsTool,
             "parameters": ParametersTool,
-            "vfe": CostTool
+            "vfe": CostTool,
+            "fixed_components": FixedComponentsTool
         }
         self.tool_instances = {
             "distributions": None,
             "parameters": None,
-            "vfe": None
+            "vfe": None,
+            "fixed_components": None
         }
         self.current_tool_name = "distributions"
         self.current_tool = None
@@ -116,11 +119,18 @@ class Debugger:
         self.data.insert(self.current_fit - 1, data)
         self.gm_prev_fit = self.gm_prev_update
 
+        print(f"[Debugger] After fit: {self.current_fit}")
+
     def after_initialize(self):
+
+        if len(self.gms) != 0:
+            return
 
         # Keep track of the new Gaussian mixture, and the corresponding dataset.
         self.gms.append(self.model.gm.clone())
         self.xs.append(self.model.gm_data.get())
+
+        print(f"[Debugger] After initialize.")
 
     def after_update(self):
 
@@ -144,3 +154,6 @@ class Debugger:
         self.data.append((update_iid, (self.gm_prev_update, self.gm_prev_update + 1)))
         self.current_update = (self.current_update + 1) % 3
         self.gm_prev_update += 1
+
+    def update_last_gm(self):
+        self.gms[-1] = self.model.gm.clone()

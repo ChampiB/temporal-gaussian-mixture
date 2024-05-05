@@ -3,7 +3,9 @@ import gc
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import colors
+import matplotlib.patheffects as pe
 import torch
+from matplotlib.patches import Rectangle
 
 
 class MatPlotLib:
@@ -83,7 +85,9 @@ class MatPlotLib:
         return fig
 
     @staticmethod
-    def draw_gaussian_mixture(data, params, r, title="", clusters=False, ellipses=True, active_only=True):
+    def draw_gaussian_mixture(
+        data, params, r=None, title="", clusters=False, ellipses=True, active_only=True, display_ids=False
+    ):
         """
         Draw the Gaussian Mixture graph
         :param params: a string defining the parameter to use (i.e, prior, empirical_prior, posterior)
@@ -93,6 +97,7 @@ class MatPlotLib:
         :param clusters: whether to draw the cluster centers
         :param ellipses: whether to draw the ellipses
         :param active_only: whether to display only the active components
+        :param display_ids: whether to display the indices of the components on the ellipses
         """
 
         # Create a figure and the list of colors.
@@ -107,14 +112,20 @@ class MatPlotLib:
             x = [x_tensor[0] for x_tensor in data]
             y = [x_tensor[1] for x_tensor in data]
 
-            r = torch.softmax(r, dim=1)
-            c = [tuple(r_n) for r_n in r] if r.shape[1] == 3 else [all_colors[torch.argmax(r_n)] for r_n in r]
+            if r is None:
+                c = [all_colors[0] for _ in x]
+            else:
+                r = torch.softmax(r, dim=1)
+                c = [tuple(r_n) for r_n in r] if r.shape[1] == 3 else [all_colors[torch.argmax(r_n)] for r_n in r]
             plt.gca().scatter(x=x, y=y, c=c)
 
         # Draw the ellipses corresponding to the current model believes.
         if ellipses is True:
-            active_components = set(r.argmax(dim=1).tolist())
-            MatPlotLib.make_ellipses(active_components, params, all_colors, active_only)
+            if r is None:
+                active_components = {k for k in range(len(params[3]))}
+            else:
+                active_components = set(r.argmax(dim=1).tolist())
+            MatPlotLib.make_ellipses(active_components, params, all_colors, active_only, display_ids)
 
         # Draw the cluster center.
         if clusters is True:
@@ -129,13 +140,68 @@ class MatPlotLib:
         return fig
 
     @staticmethod
-    def make_ellipses(active_components, params, al_colors, active_only=True):
+    def draw_fixed_components(
+        data, fixed_components, params, r, counts=None, title="", clusters=False, ellipses=True, active_only=True
+    ):
+        """
+        Draw the Gaussian Mixture graph
+        :param data: the data points
+        :param params: a string defining the parameter to use (i.e, prior, empirical_prior, posterior)
+        :param fixed_components: the components which are fixed
+        :param r: the responsibilities for all data points
+        :param counts: the counts to display
+        :param title: the title of the figure
+        :param clusters: whether to draw the cluster centers
+        :param ellipses: whether to draw the ellipses
+        :param active_only: whether to display only the active components
+        """
+
+        # Create a figure and the list of colors.
+        fig = plt.figure()
+        plt.gca().set_title(title)
+        fixed_color = "black"
+        flexible_color = "red"
+
+        # Draw the data points.
+        if data is not None:
+
+            # Draw the data points of t = 0.
+            x = [x_tensor[0] for x_tensor in data]
+            y = [x_tensor[1] for x_tensor in data]
+
+            r_star = r.argmax(dim=1)
+            c = [fixed_color if r_n in fixed_components else flexible_color for r_n in r_star]
+            plt.gca().scatter(x=x, y=y, c=c)
+
+        # Draw the ellipses corresponding to the current model believes.
+        if ellipses is True:
+            if r is None:
+                active_components = {k for k in range(len(params[3]))}
+            else:
+                active_components = set(r.argmax(dim=1).tolist())
+            all_colors = [fixed_color if k in fixed_components else flexible_color for k in range(len(params[3]))]
+            MatPlotLib.make_ellipses(active_components, params, all_colors, active_only, counts=counts)
+
+        # Draw the cluster center.
+        if clusters is True:
+            μ, _, _, _ = params
+            x = [μ_k[0] for μ_k in μ]
+            y = [μ_k[1] for μ_k in μ]
+            plt.gca().scatter(x=x, y=y, marker="X", s=100, c="black", edgecolor="white")
+
+        plt.gca().set_aspect("equal", adjustable="box")
+
+        # Return the figure.
+        return fig
+
+    @staticmethod
+    def make_ellipses(active_components, params, all_colors, active_only=True, display_ids=False, counts=None):
 
         m_hat, _, v_hat, W_hat = params
         for k in range(len(v_hat)):
             if active_only is True and k not in active_components:
                 continue
-            color = al_colors[k]
+            color = all_colors[k]
 
             covariances = torch.inverse(v_hat[k] * W_hat[k])
             v, w = np.linalg.eigh(covariances)
@@ -149,7 +215,21 @@ class MatPlotLib:
             ell.set_clip_box(plt.gca().bbox)
             ell.set_alpha(0.5)
             plt.gca().add_artist(ell)
-            plt.gca().set_aspect('equal', 'datalim')
+            plt.gca().set_aspect("equal", "datalim")
+
+            if display_ids is True:
+                plt.text(
+                    mean[0], mean[1], str(k), c=color, fontsize=20,
+                    horizontalalignment="center", verticalalignment="center",
+                    path_effects=[pe.withStroke(linewidth=4, foreground="white")]
+                )
+
+            if counts is not None:
+                plt.text(
+                    mean[0], mean[1], str(counts[k]), c=color, fontsize=20,
+                    horizontalalignment="center", verticalalignment="center",
+                    path_effects=[pe.withStroke(linewidth=4, foreground="white")]
+                )
 
     @staticmethod
     def draw_histograms(r, title=""):
@@ -216,6 +296,40 @@ class MatPlotLib:
         # Crop useful part of the image.
         bb = text.get_window_extent(renderer=r)
         fig.set_size_inches((bb.width + pad_x) / dpi, (bb.height + pad_y) / dpi)
+
+        # Return the figure.
+        return fig
+
+    @staticmethod
+    def draw_matrix(matrix, title="", draw_values=True, log_scale=False, mask=None):
+
+        # Create a figure.
+        fig = plt.figure()
+        plt.gca().set_title(title)
+
+        # Draw the matrix passed as parameters.
+        if log_scale is True:
+            axis_img = plt.matshow(matrix + 10e-6, fignum=0, norm=mpl.colors.LogNorm())
+        else:
+            axis_img = plt.matshow(matrix + 10e-6, fignum=0)
+        plt.colorbar(axis_img)
+
+        # Draw the matrix values, if requested.
+        if draw_values is True:
+            for i in range(matrix.shape[1]):
+                for j in range(matrix.shape[0]):
+                    c = matrix[j, i]
+                    if c >= 1000:
+                        c = str(int(float(c) / 1000)) + "K"
+                    elif c >= 100:
+                        c = str(int(c))
+                    else:
+                        c = str(round(float(c), 2))
+                    plt.gca().text(i, j, c, va="center", ha="center", c="white")
+                    if mask is not None and mask[j, i] == 1:
+                        plt.gca().add_patch(Rectangle(
+                            (i - 0.5, j - 0.5), 1, 1, fc=(0.5, 0.5, 0.5, 0.5), ec="orange", lw=1
+                        ))
 
         # Return the figure.
         return fig

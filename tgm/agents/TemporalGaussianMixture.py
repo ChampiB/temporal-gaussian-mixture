@@ -36,7 +36,7 @@ class TemporalGaussianMixture:
 
         # Train the agent.
         steps_done = 0
-        while steps_done <= 300:
+        while steps_done <= 1000:
 
             # Select the next action, and execute it in the environment.
             action = self.step(obs)
@@ -64,7 +64,7 @@ class TemporalGaussianMixture:
         # TODO
         return random.randint(0, self.n_actions - 1)
 
-    def learn(self, debugger, force_initialize=False):
+    def learn(self, debugger, force_initialize=True):
 
         # The first time the function is called, initialize the Gaussian mixture.
         if force_initialize or not self.gm.is_initialized():
@@ -84,6 +84,11 @@ class TemporalGaussianMixture:
 
         # Forget the datapoints that can be discarded.
         self.dataset.forget()
+
+        # Update the components which are considered fixed.
+        self.gm.update_fixed_components()
+        if debugger is not None:
+            debugger.update_last_gm()
 
         # Update the prior parameters.
         self.gm.update_prior_parameters()
