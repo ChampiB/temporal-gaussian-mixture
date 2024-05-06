@@ -62,6 +62,7 @@ class Shell(ctk.CTkFrame):
             "v_bar": (10, 0, r"\bar{v}_k = v_k + N^{'}_k"),
             "beta_bar": (10, 0, r"\bar{\beta}_k = \beta_k + N^{'}_k"),
             "d_bar": (10, 0, r"\bar{d}_k = d_k + N^{'}_k"),
+            "r_bar": (-30, 50, r"\bar{r}_{nk} = \frac{\rho_{nk}}{\sum_{k=1}^K \rho_{nk}} \quad where: \quad \rho_{nk} = \mathbb{E}_{Q(\boldsymbol{D})}[\ln \boldsymbol{D}_k] - \frac{K}{2}\ln 2\pi + \frac{1}{2}\mathbb{E}_{Q(\boldsymbol{\Lambda}_k)}[\ln \mid \boldsymbol{\Lambda}_k \mid] - \frac{1}{2}\mathbb{E}_{Q(\boldsymbol{\mu}_k, \boldsymbol{\Lambda}_k)}[(x_n - \boldsymbol{\mu}_k)^\top \boldsymbol{\Lambda}_k(x_n - \boldsymbol{\mu}_k)]"),
             "N_second": (10, 0, r"N^{''}_k = \sum_{n=\mathbb{N}^{''}} \hat{r}_{nk}"),
             "x_second": (10, 10, r"\bar{x}^{''}_k = \frac{1}{N^{''}_k}\sum_{n=\mathbb{N}^{''}} \hat{r}_{nk} x_n"),
             "S_second": (10, 10, r"S^{''}_k = \frac{1}{N^{''}_k}\sum_{n=\mathbb{N}^{''}} \hat{r}_{nk} (x_n - \bar{x}^{''}_k)(x_n - \bar{x}^{''}_k)^\top"),
@@ -176,23 +177,36 @@ class Shell(ctk.CTkFrame):
 
     def display_tensor(self, x, tensor_name="result"):
 
+        # Display 0d tensor, i.e., scalar.
+        if isinstance(x, torch.Tensor) and len(x.shape) == 0:
+            x = x.item()
+        if isinstance(x, float) or isinstance(x, int):
+            image = MatPlotLib.draw_equation(
+                f"{tensor_name} = {x:0.3f}",
+                self.to_rgb(self.bg_color), self.to_rgb(self.text_color), 50, 10
+            )
+            self.display_image(image)
+            self.entry.focus_force()
+            return
+
         # Convert list into tensor.
         if isinstance(x, list):
             if len(x) == 0 or (len(x) > 0 and not isinstance(x[0], torch.Tensor)):
                 x = torch.tensor(x)
 
         # Check that the size of the tensor is correct.
-        len_shape = len([len(x)] + [s for s in x[0].shape] if isinstance(x, list) else x.shape)
+        len_shape = 1 + len(x[0].shape) if isinstance(x, list) else len(x.shape)
         if 3 < len_shape < 1:
             msg = f"Invalid shape, the tensor '{tensor_name}' should have between one and three dimensions."
             self.display_error_message(msg)
 
         # Format the tensor as a list of matrices.
-        display_index = True if len_shape == 3 else False
-        if len_shape <= 1:
-            x = x.unsqueeze(dim=0)
-        if len_shape <= 2:
+        display_index = True if isinstance(x, list) else False
+        if not isinstance(x, list):
             x = [x]
+        if len(x[0].shape) <= 1:
+            for i in range(len(x)):
+                x[i] = x[i].unsqueeze(dim=0)
 
         # Display the list of matrices.
         for index, matrix in enumerate(x):
@@ -280,6 +294,7 @@ class Shell(ctk.CTkFrame):
             "beta0_bar": self.debugger.gms[self.prev_gm].β_bar,
             "d0_bar": self.debugger.gms[self.prev_gm].d_bar,
             "x0_bar": self.debugger.gms[self.prev_gm].x_bar,
+            "r0_bar": self.debugger.gms[self.prev_gm].r_bar,
             "W0_hat": self.debugger.gms[self.prev_gm].W_hat,
             "m0_hat": self.debugger.gms[self.prev_gm].m_hat,
             "v0_hat": self.debugger.gms[self.prev_gm].v_hat,
@@ -305,6 +320,7 @@ class Shell(ctk.CTkFrame):
             "beta1_bar": self.debugger.gms[self.next_gm].β_bar,
             "d1_bar": self.debugger.gms[self.next_gm].d_bar,
             "x1_bar": self.debugger.gms[self.next_gm].x_bar,
+            "r1_bar": self.debugger.gms[self.next_gm].r_bar,
             "W1_hat": self.debugger.gms[self.next_gm].W_hat,
             "m1_hat": self.debugger.gms[self.next_gm].m_hat,
             "v1_hat": self.debugger.gms[self.next_gm].v_hat,
