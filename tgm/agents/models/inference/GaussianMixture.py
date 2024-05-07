@@ -10,11 +10,11 @@ class GaussianMixture:
 
     @staticmethod
     def clone(v, d, β, m, W):
-        W_cloned = [W_k.clone() for W_k in W]
-        m_cloned = [m_k.clone() for m_k in m]
-        v_cloned = v.clone()
-        β_cloned = β.clone()
-        d_cloned = d.clone()
+        W_cloned = None if W is None else [W_k.clone() for W_k in W]
+        m_cloned = None if m is None else [m_k.clone() for m_k in m]
+        v_cloned = None if v is None else v.clone()
+        β_cloned = None if β is None else β.clone()
+        d_cloned = None if d is None else d.clone()
         return v_cloned, d_cloned, β_cloned, m_cloned, W_cloned
 
     @staticmethod

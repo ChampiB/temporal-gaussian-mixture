@@ -30,7 +30,7 @@ class TreeView:
 
         # Treeview widget data
         self.treeview = ttk.Treeview(parent, show="tree", selectmode="browse")
-        self.treeview.column("#0", width=300)
+        self.treeview.column("#0", width=380)
         self.insert(data)
         self.treeview.bind("<<TreeviewSelect>>", self.on_select)
         self.treeview.grid(row=0, column=0, padx=padding, pady=(padding, 0), sticky="nsew")

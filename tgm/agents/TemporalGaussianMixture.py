@@ -45,9 +45,9 @@ class TemporalGaussianMixture:
 
             # If required, perform one iteration of training.
             if steps_done > 0 and steps_done % self.learning_interval == 0:
+                debugger.before("fit", auto_index=True)
                 self.learn(debugger)
-                if debugger is not None:
-                    debugger.after_fit()
+                debugger.after("fit")
 
             # Reset the environment when a trial ends.
             if done:
@@ -69,9 +69,7 @@ class TemporalGaussianMixture:
         # The first time the function is called, initialize the Gaussian mixture.
         if force_initialize or not self.gm.is_initialized():
             x = self.gm_data.get()
-            self.gm.initialize(x, debugger=debugger)
-            if debugger is not None:
-                debugger.after_initialize()
+            self.gm.initialize(x, debugger)
 
         # Update the set of data points that can be discarded.
         self.dataset.update_forgettable_set(self.gm)
@@ -86,10 +84,17 @@ class TemporalGaussianMixture:
         self.dataset.forget()
 
         # Update the components which are considered fixed.
+        debugger.before("update_fixed_components")
         self.gm.update_fixed_components()
-        if debugger is not None:
-            debugger.update_last_gm()
+        debugger.after("update_fixed_components")
 
         # Update the prior parameters.
         self.gm.update_prior_parameters()
         self.tm.update_prior_parameters()
+
+    def clone(self):
+        # TODO clone other components
+        return self.gm.clone()
+
+    def diff(self, model):
+        return {}  # TODO implement
