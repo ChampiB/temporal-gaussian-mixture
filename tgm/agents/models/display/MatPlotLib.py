@@ -195,16 +195,23 @@ class MatPlotLib:
         return fig
 
     @staticmethod
-    def draw_data_points(data, title=""):
+    def draw_data_points(data, title="", data_colors="gray"):
 
         # Create a figure and the list of colors.
         fig = plt.figure()
         plt.gca().set_title(title)
 
-        # Draw the data points of t = 0.
-        x = [x_tensor[0] for x_tensor in data]
-        y = [x_tensor[1] for x_tensor in data]
-        plt.gca().scatter(x=x, y=y, c="gray")
+        # Ensure the data and colors are lists.
+        if not isinstance(data, list):
+            data = [data]
+        if not isinstance(data_colors, list):
+            data_colors = [data_colors]
+
+        # Draw the data points.
+        for datum, color in zip(data, data_colors):
+            x = [x_tensor[0] for x_tensor in datum]
+            y = [x_tensor[1] for x_tensor in datum]
+            plt.gca().scatter(x=x, y=y, c=color)
 
         # Return the figure.
         return fig
@@ -232,7 +239,7 @@ class MatPlotLib:
     @staticmethod
     def make_ellipses(active_components, params, all_colors, active_only=True, display_ids=False, counts=None):
 
-        m_hat, _, v_hat, W_hat = params
+        m_hat, _, W_hat, v_hat = params
         for k in range(len(v_hat)):
             if active_only is True and k not in active_components:
                 continue

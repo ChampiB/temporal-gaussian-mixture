@@ -43,7 +43,8 @@ class TreeView:
     def on_select(self, _):
         item = self.treeview.selection()[0]
         tags = self.treeview.item(item, "tags")
-        self.on_select_function(tags)
+        text = self.treeview.item(item, "text")
+        self.on_select_function(text, tags)
 
     def insert(self, data):
         for iid, tags in data:
@@ -56,4 +57,4 @@ class TreeView:
         items = self.treeview.selection()
         if len(items) == 0:
             return None
-        return self.treeview.item(items[0], "tags")
+        return [int(tag) for tag in self.treeview.item(items[0], "tags")]

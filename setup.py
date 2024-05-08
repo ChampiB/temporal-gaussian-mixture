@@ -19,6 +19,7 @@ setup(
         "torch==2.0.0",
         "matplotlib==3.6.2",
         "pydot",
+        "pillow",
         "pytest==7.3.1",
         "customtkinter==0.3"
         "screeninfo",

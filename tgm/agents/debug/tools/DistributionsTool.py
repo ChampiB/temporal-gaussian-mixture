@@ -62,12 +62,13 @@ class DistributionsTool(ctk.CTkFrame):
         ]
 
         if selected is not None:
-            prev_gm, next_gm, fit_id = selected
-            self.update_content(
-                debugger.gms, debugger.xs, debugger.init_params, int(prev_gm), int(next_gm), int(fit_id)
-            )
+            self.update_content(debugger.checkpoints, selected)
 
-    def update_content(self, gms, xs, init_params, prev_gm, next_gm, fit_id):
+    def update_content(self, checkpoints, tags):
+
+        # Retrieve the previous and next Gaussian mixture indices.
+        prev_gm = tags[0]
+        next_gm = tags[-1]
 
         # Remove the initial text, and display the images instead.
         if self.selection_label.winfo_viewable():
@@ -80,32 +81,32 @@ class DistributionsTool(ctk.CTkFrame):
 
         # Update the labels corresponding to the previous Gaussian mixture.
         if prev_gm != self.prev_gm:
-            self.update_image(0, 0, self.cache(gms, xs, "distributions", "prior", prev_gm))
-            self.update_image(0, 1, self.cache(gms, xs, "responsibilities", "prior", prev_gm))
-            self.update_image(1, 0, self.cache(gms, xs, "distributions", "empirical_prior", prev_gm))
-            self.update_image(1, 1, self.cache(gms, xs, "responsibilities", "empirical_prior", prev_gm))
-            self.update_image(2, 0, self.cache(gms, xs, "distributions", "posterior", prev_gm))
-            self.update_image(2, 1, self.cache(gms, xs, "responsibilities", "posterior", prev_gm))
+            self.update_image(0, 0, self.cache(checkpoints, "distributions", "prior", prev_gm))
+            self.update_image(0, 1, self.cache(checkpoints, "responsibilities", "prior", prev_gm))
+            self.update_image(1, 0, self.cache(checkpoints, "distributions", "empirical_prior", prev_gm))
+            self.update_image(1, 1, self.cache(checkpoints, "responsibilities", "empirical_prior", prev_gm))
+            self.update_image(2, 0, self.cache(checkpoints, "distributions", "posterior", prev_gm))
+            self.update_image(2, 1, self.cache(checkpoints, "responsibilities", "posterior", prev_gm))
 
         # Update the labels corresponding to the next Gaussian mixture.
         if next_gm != self.next_gm:
-            self.update_image(0, 2, self.cache(gms, xs, "distributions", "prior", next_gm))
-            self.update_image(0, 3, self.cache(gms, xs, "responsibilities", "prior", next_gm))
-            self.update_image(1, 2, self.cache(gms, xs, "distributions", "empirical_prior", next_gm))
-            self.update_image(1, 3, self.cache(gms, xs, "responsibilities", "empirical_prior", next_gm))
-            self.update_image(2, 2, self.cache(gms, xs, "distributions", "posterior", next_gm))
-            self.update_image(2, 3, self.cache(gms, xs, "responsibilities", "posterior", next_gm))
+            self.update_image(0, 2, self.cache(checkpoints, "distributions", "prior", next_gm))
+            self.update_image(0, 3, self.cache(checkpoints, "responsibilities", "prior", next_gm))
+            self.update_image(1, 2, self.cache(checkpoints, "distributions", "empirical_prior", next_gm))
+            self.update_image(1, 3, self.cache(checkpoints, "responsibilities", "empirical_prior", next_gm))
+            self.update_image(2, 2, self.cache(checkpoints, "distributions", "posterior", next_gm))
+            self.update_image(2, 3, self.cache(checkpoints, "responsibilities", "posterior", next_gm))
 
         # Update the indices of the previous and next Gaussian mixture.
         self.prev_gm = prev_gm
         self.next_gm = next_gm
 
-    def cache(self, gms, xs, graph_type, distribution_type, gm_id):
+    def cache(self, checkpoints, graph_type, distribution_type, gm_id):
 
         # If image not in cache, compute and cache all the images corresponding to the Gaussian mixture index.
         if gm_id not in self._cache[graph_type][distribution_type].keys():
-            gm = gms[gm_id]
-            x = xs[gm_id]
+            gm = checkpoints[gm_id]["gm"]
+            x = checkpoints[gm_id]["gm_data"].get()
             r = gm.compute_responsibilities(x, "prior")
             self._cache["distributions"]["prior"][gm_id] = gm.draw_distribution(x, r, "prior")
             self._cache["responsibilities"]["prior"][gm_id] = gm.draw_responsibilities(r, "prior")

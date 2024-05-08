@@ -45,9 +45,7 @@ class TemporalGaussianMixture:
 
             # If required, perform one iteration of training.
             if steps_done > 0 and steps_done % self.learning_interval == 0:
-                debugger.before("fit", auto_index=True)
                 self.learn(debugger)
-                debugger.after("fit")
 
             # Reset the environment when a trial ends.
             if done:
@@ -76,7 +74,9 @@ class TemporalGaussianMixture:
 
         # Fit the Gaussian mixture and temporal model.
         gm_x_forget, gm_x_keep = self.gm_data.get(split=True)
-        self.gm.fit(gm_x_forget, gm_x_keep, debugger=debugger)
+        debugger.before("fit", auto_index=True)
+        self.gm.fit(gm_x_forget, gm_x_keep, debugger)
+        debugger.after("fit")
         tm_x_forget, tm_x_keep = self.tm_data.get(self.gm, split=True)
         self.tm.fit(tm_x_forget, tm_x_keep)
 
@@ -84,17 +84,17 @@ class TemporalGaussianMixture:
         self.dataset.forget()
 
         # Update the components which are considered fixed.
-        debugger.before("update_fixed_components")
-        self.gm.update_fixed_components()
-        debugger.after("update_fixed_components")
+        self.gm.update_fixed_components(debugger)
 
         # Update the prior parameters.
         self.gm.update_prior_parameters()
         self.tm.update_prior_parameters()
 
     def clone(self):
-        # TODO clone other components
-        return self.gm.clone()
-
-    def diff(self, model):
-        return {}  # TODO implement
+        dataset = self.dataset.clone()
+        return {
+            "gm": self.gm.clone(),
+            "dataset": dataset,
+            "gm_data": GaussianMixtureView(dataset),
+            "tm_data": TemporalModelView(dataset)
+        }

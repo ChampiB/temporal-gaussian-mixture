@@ -1,37 +1,69 @@
+import tkinter as tk
 import customtkinter as ctk
 from functools import partial
+from os.path import join
+from os import environ as env_vars
+from PIL import Image
 
 
 class ToolsBar:
 
     def __init__(self, parent, update_tool, padding=10, font=("Helvetica", 30, "normal"), size=65):
 
-        distributions_button = ctk.CTkButton(
-            parent, text="D", width=size, height=size, corner_radius=0, font=font,
+        self.padding = padding
+
+        self.distribution_icon = ctk.CTkImage(
+            Image.open(join(env_vars["DATA_DIRECTORY"], "icons", "distribution.png")), size=(50, 50)
+        )
+        self.distributions_button = ctk.CTkButton(
+            parent, text="", image=self.distribution_icon, width=size, height=size, corner_radius=0, font=font,
             command=partial(update_tool, name="distributions")
         )
-        distributions_button.grid(row=0, column=0, padx=padding, pady=(padding, 0))
 
-        parameters_button = ctk.CTkButton(
-            parent, text="θ", width=size, height=size, corner_radius=0, font=font,
+        self.parameter_image = ctk.CTkImage(
+            Image.open(join(env_vars["DATA_DIRECTORY"], "icons", "parameter.png")), size=(50, 50)
+        )
+        self.parameters_button = ctk.CTkButton(
+            parent, text="", image=self.parameter_image, width=size, height=size, corner_radius=0, font=font,
             command=partial(update_tool, name="parameters")
         )
-        parameters_button.grid(row=1, column=0, padx=padding, pady=(padding, 0))
 
-        vfe_button = ctk.CTkButton(
+        self.vfe_button = ctk.CTkButton(
             parent, text="F", width=size, height=size, corner_radius=0, font=font,
             command=partial(update_tool, name="vfe")
         )
-        vfe_button.grid(row=2, column=0, padx=padding, pady=(padding, 0))
 
-        components_button = ctk.CTkButton(
+        self.components_button = ctk.CTkButton(
             parent, text="C", width=size, height=size, corner_radius=0, font=font,
             command=partial(update_tool, name="fixed_components")
         )
-        components_button.grid(row=3, column=0, padx=padding, pady=(padding, 0))
 
-        initialization_button = ctk.CTkButton(
+        self.initialization_button = ctk.CTkButton(
             parent, text="I", width=size, height=size, corner_radius=0, font=font,
             command=partial(update_tool, name="initialization")
         )
-        initialization_button.grid(row=4, column=0, padx=padding, pady=(padding, 0))
+
+        self.data_image = ctk.CTkImage(
+            Image.open(join(env_vars["DATA_DIRECTORY"], "icons", "database.png")), size=(50, 50)
+        )
+        self.data_button = ctk.CTkButton(
+            parent, text="", image=self.data_image, width=size, height=size, corner_radius=0, font=font,
+            command=partial(update_tool, name="data")
+        )
+
+        self.buttons = {
+            "distributions": self.distributions_button,
+            "parameters": self.parameters_button,
+            "data": self.data_button,
+            "vfe": self.vfe_button,
+            "fixed_components": self.components_button,
+            "initialization": self.initialization_button
+        }
+
+    def update_displayed_tools(self, tool_names):
+        i = 0
+        for tool_name, button in self.buttons.items():
+            button.grid_forget()
+            if tool_name in tool_names:
+                button.grid(row=0, column=i, padx=self.padding, pady=self.padding)
+                i += 1

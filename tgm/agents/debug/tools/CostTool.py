@@ -30,12 +30,9 @@ class CostTool(ctk.CTkFrame):
         self.vfe_image = PhotoImage(empty_image)
         self.label = tk.Label(self, image=self.vfe_image)
         if selected is not None:
-            prev_gm, next_gm, fit_id = selected
-            self.update_content(
-                debugger.gms, debugger.xs, debugger.init_params, int(prev_gm), int(next_gm), int(fit_id)
-            )
+            self.update_content(debugger.checkpoints, selected)
 
-    def update_content(self, gms, xs, init_params, prev_gm, next_gm, fit_id):
+    def update_content(self, checkpoints, tags):
 
         # Remove the initial text, and display the images instead.
         if self.selection_label.winfo_viewable():
@@ -44,7 +41,9 @@ class CostTool(ctk.CTkFrame):
             self.label.grid(row=0, column=0)
 
         # Update the VFE image.
-        vfe = [gms[i].vfe for i in range(prev_gm, next_gm + 1)]
+        prev_gm = tags[0]
+        next_gm = tags[-1]
+        vfe = [checkpoints[i]["gm"].vfe for i in range(prev_gm, next_gm + 1)]
         x = list(range(prev_gm, next_gm + 1))
         image = MatPlotLib.draw_graph(x, vfe, "Variational Free Energy.")
         self.vfe_image = FigureCanvasTkAgg(image, master=self)

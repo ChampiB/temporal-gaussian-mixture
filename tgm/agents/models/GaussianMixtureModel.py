@@ -42,17 +42,15 @@ class GaussianMixtureModel:
         i = 0
         while n_steps < 5 and i < 100:
 
-            # Notify the debugger that a step of variational inference is starting.
+            # Notify the debugger that a step of variational inference and a Z update are starting.
             debugger.before("vi_step", auto_index=True)
+            debugger.before("update_Z", new_checkpoint=False)
 
             # Keep track of previous variational free energy.
             vfe = self.vfe
             if vfe.isnan().any():
                 print("[Warning] The VFE is 'not a number'.")
                 break
-
-            # Notify the debugger that a Z update is starting.
-            debugger.before("update_Z")
 
             # Update for Z (forgettable data points).
             self.r_bar = self.compute_responsibilities(x_forget)
@@ -82,7 +80,7 @@ class GaussianMixtureModel:
 
             # Notify the debugger that a Z update is ending and that a D update is starting.
             debugger.after("update_Z")
-            debugger.before("update_D")
+            debugger.before("update_D", new_checkpoint=False)
 
             # Update for D.
             self.d_bar = self.d + self.N_prime
@@ -91,7 +89,7 @@ class GaussianMixtureModel:
 
             # Notify the debugger that a D update is ending and that a μ and Λ update is starting.
             debugger.after("update_D")
-            debugger.before("update_μ_and_Λ")
+            debugger.before("update_μ_and_Λ", new_checkpoint=False)
 
             # Update for μ and Λ.
             self.v_bar = self.v + self.N_prime
@@ -104,15 +102,13 @@ class GaussianMixtureModel:
             self.W_hat = GMix.W_hat(self.W_bar, self.N_second, self.S_second, self.x_second, self.m_bar, self.β_bar, self.β_hat)
             self.log_det_Λ = GMix.expected_log_det_Λ(self.W_hat, self.v_hat)
 
-            # Notify the debugger that a μ and Λ update is ending.
-            debugger.after("update_μ_and_Λ")
-
             # Update variational free energy and the number of steps.
             self.vfe = GMix.vfe(self)
             n_steps = n_steps + 1 if float(vfe - self.vfe) < threshold else 0
 
-            # Notify the debugger that a step of variational inference is ending.
-            debugger.after("vi_step")
+            # Notify the debugger that a μ and Λ update, as well as a step of variational inference are ending.
+            debugger.after("update_μ_and_Λ")
+            debugger.after("vi_step", new_checkpoint=False)
 
             # Keep track of the number of inference steps.
             i += 1
@@ -142,7 +138,7 @@ class GaussianMixtureModel:
         self.v_fixed, self.d_fixed, self.β_fixed, self.m_fixed, self.W_fixed = self.parameters_of(self.fixed_components)
 
         # Add checkpoint from which fixed component parameters can be accessed.
-        debugger.before("prior_initialization")
+        debugger.before("prior_initialization", auto_index=True)
 
         # Compute all the component parameters.
         init_fc = {
@@ -235,8 +231,10 @@ class GaussianMixtureModel:
 
         return extracted_v, extracted_d, extracted_β, extracted_m, extracted_W
 
-    def update_fixed_components(self):
+    def update_fixed_components(self, debugger):
+        debugger.before("update_fixed_components", auto_index=True)
         self.fixed_gaussian.update(self)
+        debugger.after("update_fixed_components")
 
     def compute_responsibilities(self, x, d="posterior"):
 
@@ -277,6 +275,10 @@ class GaussianMixtureModel:
         
         # Create a new Gaussian mixture.
         gm = GaussianMixtureModel(self.n_states, self.n_observations)
+
+        # Clone the parameter of the fixed components.
+        gm.v_fixed, gm.d_fixed, gm.β_fixed, gm.m_fixed, gm.W_fixed = \
+            GMix.clone(self.v_fixed, self.d_fixed, self.β_fixed, self.m_fixed, self.W_fixed)
 
         # Clone the prior parameters.
         gm.v, gm.d, gm.β, gm.m, gm.W = GMix.clone(self.v, self.d, self.β, self.m, self.W)

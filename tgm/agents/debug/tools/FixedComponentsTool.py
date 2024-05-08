@@ -59,12 +59,13 @@ class FixedComponentsTool(ctk.CTkFrame):
         self.matrix_labels = [tk.Label(self, image=matrix_image) for matrix_image in self.matrix_images]
 
         if selected is not None:
-            prev_gm, next_gm, fit_id = selected
-            self.update_content(
-                debugger.gms, debugger.xs, debugger.init_params, int(prev_gm), int(next_gm), int(fit_id)
-            )
+            self.update_content(debugger.checkpoints, selected)
 
-    def update_content(self, gms, xs, init_params, prev_gm, next_gm, fit_id):
+    def update_content(self, checkpoints, tags):
+
+        # Retrieve the previous and next Gaussian mixture indices.
+        prev_gm = tags[0]
+        next_gm = tags[-1]
 
         # Remove the initial text, and display the images instead.
         if self.selection_label.winfo_viewable():
@@ -77,30 +78,32 @@ class FixedComponentsTool(ctk.CTkFrame):
 
         # Update the labels corresponding to the previous Gaussian mixture.
         if prev_gm != self.prev_gm:
-            self.update_image(0, 0, self.cache(gms, xs, "posterior", prev_gm))
-            self.update_image(1, 0, self.cache(gms, xs, "fixed_components", prev_gm))
+            self.update_image(0, 0, self.cache(checkpoints, "posterior", prev_gm))
+            self.update_image(1, 0, self.cache(checkpoints, "fixed_components", prev_gm))
 
         # Update the labels corresponding to the next Gaussian mixture.
         if next_gm != self.next_gm:
-            self.update_image(0, 1, self.cache(gms, xs, "posterior", next_gm))
-            self.update_image(1, 1, self.cache(gms, xs, "fixed_components", next_gm))
+            self.update_image(0, 1, self.cache(checkpoints, "posterior", next_gm))
+            self.update_image(1, 1, self.cache(checkpoints, "fixed_components", next_gm))
 
         # Update the matrix of KL-divergences.
-        self.update_kl_matrices(gms, prev_gm, next_gm)
+        self.update_kl_matrices(checkpoints, prev_gm, next_gm)
 
         # Update the indices of the previous and next Gaussian mixture.
         self.prev_gm = prev_gm
         self.next_gm = next_gm
 
-    def update_kl_matrices(self, gms, prev_gm, next_gm):
+    def update_kl_matrices(self, checkpoints, prev_gm, next_gm):
 
         # Load the matrix images in the cache.
         if prev_gm not in self._cache["matrices"]:
-            matrix, mask = self.compute_kl_matrix(gms[prev_gm], gms[next_gm])
+            gm0 = checkpoints[prev_gm]["gm"]
+            gm1 = checkpoints[next_gm]["gm"]
+            matrix, mask = self.compute_kl_matrix(gm0, gm1)
             self._cache["matrices"][prev_gm] = MatPlotLib.draw_matrix(
                 matrix, "KL-divergence between components.", log_scale=True, mask=mask
             )
-            matrix = torch.where(matrix < gms[prev_gm].fixed_gaussian.kl_threshold, 1, 0)
+            matrix = torch.where(matrix < gm0.fixed_gaussian.kl_threshold, 1, 0)
             self._cache["threshold_matrices"][prev_gm] = MatPlotLib.draw_matrix(
                 matrix, "KL-divergence below threshold.", mask=mask
             )
@@ -130,12 +133,12 @@ class FixedComponentsTool(ctk.CTkFrame):
                     mask[i0][i1] = 1
         return matrix, mask
 
-    def cache(self, gms, xs, distribution_type, gm_id):
+    def cache(self, checkpoints, distribution_type, gm_id):
 
         # If image not in cache, compute and cache all the images corresponding to the Gaussian mixture index.
         if gm_id not in self._cache[distribution_type].keys():
-            gm = gms[gm_id]
-            x = xs[gm_id]
+            gm = checkpoints[gm_id]["gm"]
+            x = checkpoints[gm_id]["gm_data"].get()
             r = gm.compute_responsibilities(x, "posterior")
             self._cache["posterior"][gm_id] = gm.draw_distribution(x, r, "posterior")
             self._cache["fixed_components"][gm_id] = gm.draw_fixed_components(x, r, "posterior")

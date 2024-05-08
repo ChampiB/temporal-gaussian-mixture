@@ -13,7 +13,6 @@ class TestDebugger:
 
         # Set some fake return values for the clone and diff functions.
         tgm.clone.return_value = [1, 1]
-        tgm.diff.return_value = {}
 
         return tgm
 

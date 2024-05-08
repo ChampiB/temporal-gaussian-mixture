@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import torch
 
 
@@ -97,3 +99,12 @@ class Dataset:
         self.r = new_r
         self.d = new_d
         self.forgettable = new_forgettable
+
+    def clone(self):
+        dataset = Dataset()
+        dataset.x = [x.clone() for x in self.x]
+        dataset.a = deepcopy(self.a)
+        dataset.r = deepcopy(self.r)
+        dataset.d = deepcopy(self.d)
+        dataset.forgettable = deepcopy(self.forgettable)
+        return dataset

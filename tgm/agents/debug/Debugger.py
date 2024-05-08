@@ -17,6 +17,18 @@ class Debugger:
         self.current_iid = ""
         self.auto_indices = {}
 
+        # Store the prefix hierarchical structure.
+        # Example:
+        # - hierarchical_structure = {
+        #       "prior_initialization": {},
+        #       "fit": {
+        #           "vi_step": {
+        #               "update_Z": {}
+        #           }
+        #       }
+        #   }
+        self.hierarchical_structure = {}
+
         # Store the last checkpoints corresponding to each prefix.
         # Example:
         # - prefixes = {"fit", "vi_step", "update_Z"}
@@ -42,7 +54,7 @@ class Debugger:
         gui = DebuggerGUI(self.data, self.checkpoints)
         gui.run()
 
-    def before(self, prefix, auto_index=False):
+    def before(self, prefix, auto_index=False, new_checkpoint=True):
 
         # Check that debugging is required.
         if self.debug is False:
@@ -53,6 +65,9 @@ class Debugger:
             self.auto_indices[prefix] = 1 if auto_index is True else -1
         auto_id = self.auto_indices[prefix]
 
+        # Update the hierarchical structure.
+        self.update_hierarchical_structure(self.current_iid, prefix)
+
         # Add a new level in the iid.
         level = prefix
         if auto_id != -1:
@@ -61,12 +76,11 @@ class Debugger:
         self.add_iid_level(level)
 
         # Reset all auto-indices of (sub) levels.
-        for auto_prefix, auto_index in self.auto_indices.items():
-            if auto_prefix not in self.current_iid and auto_index != -1:
-                self.auto_indices[auto_prefix] = 1
+        h_structure = self.hierarchical_structure_get(self.current_iid)
+        self.reset_auto_indices(h_structure)
 
         # Add checkpoint and update last checkpoints of prefix.
-        self.add_checkpoint(prefix)
+        self.add_checkpoint(prefix, new_checkpoint)
 
     def add_iid_level(self, level):
         if len(self.current_iid) != 0:
@@ -78,7 +92,7 @@ class Debugger:
         # Add checkpoint and update last checkpoints of prefix.
         self.add_checkpoint(prefix)
 
-    def after(self, prefix):
+    def after(self, prefix, new_checkpoint=True):
 
         # Check that debugging is required.
         if self.debug is False:
@@ -91,7 +105,7 @@ class Debugger:
             return
 
         # Add checkpoint and update last checkpoints of prefix.
-        self.add_checkpoint(prefix)
+        self.add_checkpoint(prefix, new_checkpoint)
 
         # Add an entry in the tree view data.
         insert_id = [i for i, (iid, _) in enumerate(self.data) if self.current_iid in iid]
@@ -106,10 +120,10 @@ class Debugger:
         levels = self.current_iid.split(".")
         self.current_iid = ".".join(levels[:-1])
 
-    def add_checkpoint(self, prefix):
+    def add_checkpoint(self, prefix, new_checkpoint=True):
 
         # Check whether a next checkpoint needs to be created.
-        if len(self.checkpoints) == 0 or self.model.diff(self.checkpoints[-1]) is not None:
+        if len(self.checkpoints) == 0 or new_checkpoint is True:
             self.checkpoints.append(self.model.clone())
 
         # Update the list of last checkpoints corresponding to the prefix.
@@ -118,3 +132,46 @@ class Debugger:
             self.last_checkpoints[prefix].append(checkpoints_id)
         else:
             self.last_checkpoints[prefix] = [checkpoints_id]
+
+    def update_hierarchical_structure(self, current_iid, prefix):
+
+        # Find the sub-dictionary in which the prefix should be added.
+        h_structure = self.hierarchical_structure_get(current_iid)
+
+        # Add the prefix in the sub-dictionary, if not already present.
+        if prefix not in h_structure.keys():
+            h_structure[prefix] = {}
+
+    def hierarchical_structure_get(self, current_iid):
+
+        # Retrieve the levels.
+        levels = current_iid.split(".")
+        if len(levels) == 1 and levels[0] == "":
+            levels = []
+
+        # Find the sub-dictionary corresponding to the iid.
+        h_structure = self.hierarchical_structure
+        for level in levels:
+
+            # Retrieve the sub-dictionary corresponding to the current level.
+            h_structure_updated = False
+            for h_prefix, sub_dictionary in h_structure.items():
+                if h_prefix in level:
+                    h_structure = sub_dictionary
+                    h_structure_updated = True
+                    break
+
+            # Warn the user that the sub-dictionary could be identified.
+            if h_structure_updated is False:
+                print("[Warning] Could not update the hierarchical structure.")
+                return None
+
+        return h_structure
+
+    def reset_auto_indices(self, h_structure):
+
+        # Recursively reset the auto-indices of the hierarchical structure prefixes.
+        for prefix, sub_directory in h_structure.items():
+            if self.auto_indices[prefix] != -1:
+                self.auto_indices[prefix] = 1
+            self.reset_auto_indices(sub_directory)
