@@ -264,7 +264,7 @@ class GaussianMixtureModel:
 
     @property
     def active_components(self):
-        return set(self.r_hat.argmax(dim=1).tolist())
+        return [i for i, N_k in enumerate(self.N) if N_k != 0.0]
 
     def update_prior_parameters(self):
 
@@ -317,50 +317,27 @@ class GaussianMixtureModel:
 
         return gm
 
-    def draw_distribution(self, x, r, d="posterior", display_ids=True):
+    def draw_distribution(self, x, r, d="posterior", display_ids=True, ellipses=True, datum=None):
 
         if d == "prior":
             params = (self.m, self.β, self.W, self.v)
             return MatPlotLib.draw_gaussian_mixture(
-                x, params, r, title="Prior distribution.", display_ids=display_ids
+                x, params, r,
+                title="Prior distribution.", display_ids=display_ids, ellipses=ellipses, datum=datum
             )
 
         if d == "empirical_prior":
             params = (self.m_bar, self.β_bar, self.W_bar, self.v_bar)
             return MatPlotLib.draw_gaussian_mixture(
-                x, params, r, title="Empirical prior distribution.", display_ids=display_ids
+                x, params, r,
+                title="Empirical prior distribution.", display_ids=display_ids, ellipses=ellipses, datum=datum
             )
 
         if d == "posterior":
             params = (self.m_hat, self.β_hat, self.W_hat, self.v_hat)
             return MatPlotLib.draw_gaussian_mixture(
-                x, params, r, title="Posterior distribution.", display_ids=display_ids
-            )
-
-        raise RuntimeError(f"Unsupported distribution type '{d}'.")
-
-    def draw_fixed_components(self, x, r, d="posterior"):
-
-        counts = self.fixed_gaussian.fixed_n_steps
-        if counts is not None:
-            counts = [int(count.item()) for count in counts]
-
-        if d == "prior":
-            params = (self.m, self.β, self.W, self.v)
-            return MatPlotLib.draw_fixed_components(
-                x, self.fixed_components, params, r, title="Prior distribution.", counts=counts
-            )
-
-        if d == "empirical_prior":
-            params = (self.m_bar, self.β_bar, self.W_bar, self.v_bar)
-            return MatPlotLib.draw_fixed_components(
-                x, self.fixed_components, params, r, title="Empirical prior distribution.", counts=counts
-            )
-
-        if d == "posterior":
-            params = (self.m_hat, self.β_hat, self.W_hat, self.v_hat)
-            return MatPlotLib.draw_fixed_components(
-                x, self.fixed_components, params, r, title="Posterior distribution.", counts=counts
+                x, params, r,
+                title="Posterior distribution.", display_ids=display_ids, ellipses=ellipses, datum=datum
             )
 
         raise RuntimeError(f"Unsupported distribution type '{d}'.")

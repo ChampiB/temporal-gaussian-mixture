@@ -80,11 +80,11 @@ class TemporalGaussianMixture:
         tm_x_forget, tm_x_keep = self.tm_data.get(self.gm, split=True)
         self.tm.fit(tm_x_forget, tm_x_keep)
 
-        # Forget the datapoints that can be discarded.
-        self.dataset.forget()
-
         # Update the components which are considered fixed.
         self.gm.update_fixed_components(debugger)
+
+        # Forget the datapoints that can be discarded.
+        self.dataset.forget()
 
         # Update the prior parameters.
         self.gm.update_prior_parameters()

@@ -86,7 +86,7 @@ class MatPlotLib:
 
     @staticmethod
     def draw_gaussian_mixture(
-        data, params, r=None, title="", clusters=False, ellipses=True, active_only=True, display_ids=False
+        data, params, r=None, title="", clusters=False, ellipses=True, active_only=True, display_ids=False, datum=None
     ):
         """
         Draw the Gaussian Mixture graph
@@ -98,6 +98,7 @@ class MatPlotLib:
         :param ellipses: whether to draw the ellipses
         :param active_only: whether to display only the active components
         :param display_ids: whether to display the indices of the components on the ellipses
+        :param datum: a data point that must be highlighted
         """
 
         # Create a figure and the list of colors.
@@ -118,6 +119,12 @@ class MatPlotLib:
                 r = torch.softmax(r, dim=1)
                 c = [tuple(r_n) for r_n in r] if r.shape[1] == 3 else [all_colors[torch.argmax(r_n)] for r_n in r]
             plt.gca().scatter(x=x, y=y, c=c)
+
+        # Highlight a data point.
+        if datum is not None:
+            x = [datum[0][0]]
+            y = [datum[0][1]]
+            plt.gca().scatter(x=x, y=y, marker="X", s=100, c="black", edgecolor="white")
 
         # Draw the ellipses corresponding to the current model believes.
         if ellipses is True:
@@ -240,7 +247,7 @@ class MatPlotLib:
     def make_ellipses(active_components, params, all_colors, active_only=True, display_ids=False, counts=None):
 
         m_hat, _, W_hat, v_hat = params
-        for k in range(len(v_hat)):
+        for k in range(len(m_hat)):
             if active_only is True and k not in active_components:
                 continue
             color = all_colors[k]
@@ -309,6 +316,16 @@ class MatPlotLib:
 
         # Draw the plot.
         plt.plot(x, y)
+
+        # Return the figure.
+        return fig
+
+    @staticmethod
+    def draw_text(text):
+
+        # Create a figure and the list of colors.
+        fig = plt.figure()
+        plt.gca().set_title(text)
 
         # Return the figure.
         return fig

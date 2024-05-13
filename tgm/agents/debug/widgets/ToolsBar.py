@@ -33,6 +33,11 @@ class ToolsBar:
             command=partial(update_tool, name="vfe")
         )
 
+        self.responsibilities_button = ctk.CTkButton(
+            parent, text="R", width=size, height=size, corner_radius=0, font=font,
+            command=partial(update_tool, name="responsibilities")
+        )
+
         self.components_button = ctk.CTkButton(
             parent, text="C", width=size, height=size, corner_radius=0, font=font,
             command=partial(update_tool, name="fixed_components")
@@ -57,7 +62,8 @@ class ToolsBar:
             "data": self.data_button,
             "vfe": self.vfe_button,
             "fixed_components": self.components_button,
-            "initialization": self.initialization_button
+            "initialization": self.initialization_button,
+            "responsibilities": self.responsibilities_button
         }
 
     def update_displayed_tools(self, tool_names):

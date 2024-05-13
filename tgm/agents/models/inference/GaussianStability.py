@@ -4,6 +4,7 @@ from copy import deepcopy
 import torch
 from torch import matmul, trace, logdet
 
+from tgm.agents.models.display.MatPlotLib import MatPlotLib
 from tgm.agents.models.inference.GaussianMixture import GaussianMixture as GMix
 
 
@@ -14,7 +15,7 @@ class GaussianStability:
         self.n_steps_threshold = n_steps_threshold
         self.fixed_components = []
         self.fixed_n_steps = None
-        self.m_hat = self.W_hat = self.v_hat = self.N = None
+        self.β_hat = self.d_hat = self.m_hat = self.W_hat = self.v_hat = self.N = None
 
     def update(self, gm):
 
@@ -24,7 +25,8 @@ class GaussianStability:
         )
 
         # Keep track of the (old) posterior's parameters.
-        self.v_hat, _, _, self.m_hat, self.W_hat = GMix.clone(gm.v_hat, gm.d_hat, gm.β_hat, gm.m_hat, gm.W_hat)
+        self.v_hat, self.d_hat, self.β_hat, self.m_hat, self.W_hat = \
+            GMix.clone(gm.v_hat, gm.d_hat, gm.β_hat, gm.m_hat, gm.W_hat)
         self.N = gm.N.clone()
 
     def compute_fixed_n_steps(self, fixed_n_steps_0, N0, m0, W0, v0, N1, m1, W1, v1):
@@ -115,6 +117,40 @@ class GaussianStability:
         gs.fixed_components = deepcopy(self.fixed_components)
         gs.fixed_n_steps = None if self.fixed_n_steps is None else self.fixed_n_steps.clone()
         gs.m_hat = None if self.m_hat is None else [m_k.clone() for m_k in self.m_hat]
-        gs.m_hat = None if self.m_hat is None else [W_k.clone() for W_k in self.W_hat]
+        gs.W_hat = None if self.W_hat is None else [W_k.clone() for W_k in self.W_hat]
         gs.v_hat = None if self.v_hat is None else self.v_hat.clone()
+        gs.d_hat = None if self.d_hat is None else self.d_hat.clone()
+        gs.β_hat = None if self.β_hat is None else self.β_hat.clone()
         return gs
+
+    def compute_responsibilities(self, x):
+        if self.d_hat is None or self.β_hat is None or self.m_hat is None or self.v_hat is None or self.W_hat is None:
+            return None
+        log_D = GMix.expected_log_D(self.d_hat)
+        log_det_Λ = GMix.expected_log_det_Λ(self.W_hat, self.v_hat)
+        return GMix.responsibilities(x, self.m_hat, self.β_hat, self.W_hat, self.v_hat, log_D, log_det_Λ)
+
+    def draw_distribution(self, x, r, display_ids=True, ellipses=True, datum=None):
+
+        if r is None:
+            return MatPlotLib.draw_data_points(x, title="Posterior distribution.")
+
+        params = (self.m_hat, self.β_hat, self.W_hat, self.v_hat)
+        return MatPlotLib.draw_gaussian_mixture(
+            x, params, r,
+            title="Posterior distribution.", display_ids=display_ids, ellipses=ellipses, datum=datum
+        )
+
+    def draw_fixed_components(self, x, r):
+
+        if r is None:
+            return MatPlotLib.draw_data_points(x, title="Posterior distribution.")
+
+        counts = self.fixed_n_steps
+        if counts is not None:
+            counts = [int(count.item()) for count in counts]
+
+        params = (self.m_hat, self.β_hat, self.W_hat, self.v_hat)
+        return MatPlotLib.draw_fixed_components(
+            x, self.fixed_components, params, r, title="Posterior distribution.", counts=counts
+        )

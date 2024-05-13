@@ -76,52 +76,41 @@ class FixedComponentsTool(ctk.CTkFrame):
                     label.grid(row=y, column=x)
                     self.labels[y][x].configure(background=self.bg_color)
 
+        # Update cache.
+        self.cache(checkpoints, prev_gm, next_gm)
+
         # Update the labels corresponding to the previous Gaussian mixture.
         if prev_gm != self.prev_gm:
-            self.update_image(0, 0, self.cache(checkpoints, "posterior", prev_gm))
-            self.update_image(1, 0, self.cache(checkpoints, "fixed_components", prev_gm))
+            self.update_image(0, 0, self._cache["posterior"][prev_gm])
+            self.update_image(1, 0, self._cache["fixed_components"][prev_gm])
 
         # Update the labels corresponding to the next Gaussian mixture.
         if next_gm != self.next_gm:
-            self.update_image(0, 1, self.cache(checkpoints, "posterior", next_gm))
-            self.update_image(1, 1, self.cache(checkpoints, "fixed_components", next_gm))
+            self.update_image(0, 1, self._cache["posterior"][next_gm])
+            self.update_image(1, 1, self._cache["fixed_components"][next_gm])
 
         # Update the matrix of KL-divergences.
-        self.update_kl_matrices(checkpoints, prev_gm, next_gm)
+        if prev_gm != self.prev_gm:
+            self.matrix_images[0] = FigureCanvasTkAgg(self._cache["matrices"][prev_gm], master=self)
+            self.matrix_labels[0] = self.matrix_images[0].get_tk_widget()
+            self.matrix_labels[0].grid(row=2, column=0)
+            self.matrix_images[1] = FigureCanvasTkAgg(self._cache["threshold_matrices"][prev_gm], master=self)
+            self.matrix_labels[1] = self.matrix_images[1].get_tk_widget()
+            self.matrix_labels[1].grid(row=2, column=1)
 
         # Update the indices of the previous and next Gaussian mixture.
         self.prev_gm = prev_gm
         self.next_gm = next_gm
 
-    def update_kl_matrices(self, checkpoints, prev_gm, next_gm):
-
-        # Load the matrix images in the cache.
-        if prev_gm not in self._cache["matrices"]:
-            gm0 = checkpoints[prev_gm]["gm"]
-            gm1 = checkpoints[next_gm]["gm"]
-            matrix, mask = self.compute_kl_matrix(gm0, gm1)
-            self._cache["matrices"][prev_gm] = MatPlotLib.draw_matrix(
-                matrix, "KL-divergence between components.", log_scale=True, mask=mask
-            )
-            matrix = torch.where(matrix < gm0.fixed_gaussian.kl_threshold, 1, 0)
-            self._cache["threshold_matrices"][prev_gm] = MatPlotLib.draw_matrix(
-                matrix, "KL-divergence below threshold.", mask=mask
-            )
-
-        # Display the matrix images in the GUI.
-        self.matrix_images[0] = FigureCanvasTkAgg(self._cache["matrices"][prev_gm], master=self)
-        self.matrix_labels[0] = self.matrix_images[0].get_tk_widget()
-        self.matrix_labels[0].grid(row=2, column=0)
-        self.matrix_images[1] = FigureCanvasTkAgg(self._cache["threshold_matrices"][prev_gm], master=self)
-        self.matrix_labels[1] = self.matrix_images[1].get_tk_widget()
-        self.matrix_labels[1].grid(row=2, column=1)
-
     @staticmethod
-    def compute_kl_matrix(gm0, gm1):
+    def compute_kl_matrix(gm0, r0, gm1, r1):
+        if r0 is None or r1 is None:
+            return None, None
+
         matrix = torch.zeros([len(gm0.m_hat), len(gm1.m_hat)])
         mask = torch.zeros([len(gm0.m_hat), len(gm1.m_hat)])
-        ks0 = gm0.active_components
-        ks1 = gm1.active_components
+        ks0 = [i for i, N_k in enumerate(r0.sum(dim=0)) if N_k != 0.0]
+        ks1 = [i for i, N_k in enumerate(r1.sum(dim=0)) if N_k != 0.0]
         for i0 in range(len(gm0.m_hat)):
             precision0 = gm0.W_hat[i0] * gm0.v_hat[i0]
             for i1 in range(len(gm1.m_hat)):
@@ -133,18 +122,40 @@ class FixedComponentsTool(ctk.CTkFrame):
                     mask[i0][i1] = 1
         return matrix, mask
 
-    def cache(self, checkpoints, distribution_type, gm_id):
+    def cache(self, checkpoints, prev_id, next_id):
+        gm0 = checkpoints[prev_id]["gm"].fixed_gaussian
+        gm1 = checkpoints[next_id]["gm"].fixed_gaussian
+        x0 = checkpoints[prev_id]["gm_data"].get()
+        x1 = checkpoints[next_id]["gm_data"].get()
+        r0 = gm0.compute_responsibilities(x0)
+        r1 = gm1.compute_responsibilities(x1)
 
         # If image not in cache, compute and cache all the images corresponding to the Gaussian mixture index.
-        if gm_id not in self._cache[distribution_type].keys():
-            gm = checkpoints[gm_id]["gm"]
-            x = checkpoints[gm_id]["gm_data"].get()
-            r = gm.compute_responsibilities(x, "posterior")
-            self._cache["posterior"][gm_id] = gm.draw_distribution(x, r, "posterior")
-            self._cache["fixed_components"][gm_id] = gm.draw_fixed_components(x, r, "posterior")
+        if prev_id not in self._cache["posterior"].keys():
+            self._cache["posterior"][prev_id] = gm0.draw_distribution(x0, r0)
+            self._cache["fixed_components"][prev_id] = gm0.draw_fixed_components(x0, r0)
 
-        # Return the cached image.
-        return self._cache[distribution_type][gm_id]
+        # If image not in cache, compute and cache all the images corresponding to the Gaussian mixture index.
+        if next_id not in self._cache["posterior"].keys():
+            self._cache["posterior"][next_id] = gm1.draw_distribution(x1, r1)
+            self._cache["fixed_components"][next_id] = gm1.draw_fixed_components(x1, r1)
+
+        # Load the matrix images in the cache.
+        if prev_id not in self._cache["matrices"].keys():
+            matrix, mask = self.compute_kl_matrix(gm0, r0, gm1, r1)
+            if matrix is None or mask is None:
+                time = "0" if r0 is None else "1"
+                text = f"Matrix cannot be generated because \n responsibilities at time {time} are none."
+                self._cache["matrices"][prev_id] = MatPlotLib.draw_text(text)
+                self._cache["threshold_matrices"][prev_id] = MatPlotLib.draw_text(text)
+            else:
+                self._cache["matrices"][prev_id] = MatPlotLib.draw_matrix(
+                    matrix, "KL-divergence between components.", log_scale=True, mask=mask
+                )
+                matrix = torch.where(matrix < gm0.kl_threshold, 1, 0)
+                self._cache["threshold_matrices"][prev_id] = MatPlotLib.draw_matrix(
+                    matrix, "KL-divergence below threshold.", mask=mask
+                )
 
     def update_image(self, y, x, image):
         self.images[y][x] = FigureCanvasTkAgg(image, master=self)

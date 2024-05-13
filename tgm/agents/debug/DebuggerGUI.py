@@ -8,6 +8,7 @@ from tgm.agents.debug.tools.DistributionsTool import DistributionsTool
 from tgm.agents.debug.tools.FixedComponentsTool import FixedComponentsTool
 from tgm.agents.debug.tools.InitializationTool import InitializationTool
 from tgm.agents.debug.tools.ParametersTool import ParametersTool
+from tgm.agents.debug.tools.ResponsibilitiesTool import ResponsibilitiesTool
 from tgm.agents.debug.widgets.ToolsBar import ToolsBar
 from tgm.agents.debug.widgets.TreeView import TreeView
 
@@ -50,7 +51,8 @@ class DebuggerGUI:
             "data": DatasetTool,
             "vfe": CostTool,
             "fixed_components": FixedComponentsTool,
-            "initialization": InitializationTool
+            "initialization": InitializationTool,
+            "responsibilities": ResponsibilitiesTool
         }
         self.tool_instances = {
             "distributions": None,
@@ -58,7 +60,8 @@ class DebuggerGUI:
             "data": None,
             "vfe": None,
             "fixed_components": None,
-            "initialization": None
+            "initialization": None,
+            "responsibilities": None
         }
         self.current_tool_name = "distributions"
         self.current_tool = None
@@ -96,11 +99,11 @@ class DebuggerGUI:
 
         # Update the tools in the tools bar.
         tools_to_display = {
-            "fit": ["distributions", "parameters", "data", "vfe"],
-            "vi_step": ["distributions", "parameters", "data", "vfe"],
-            "update_Z": ["distributions", "parameters", "data", "vfe"],
-            "update_D": ["distributions", "parameters", "data", "vfe"],
-            "update_μ_and_Λ": ["distributions", "parameters", "data", "vfe"],
+            "fit": ["distributions", "parameters", "data", "vfe", "responsibilities"],
+            "vi_step": ["distributions", "parameters", "data", "vfe", "responsibilities"],
+            "update_Z": ["distributions", "parameters", "data", "vfe", "responsibilities"],
+            "update_D": ["distributions", "parameters", "data", "vfe", "responsibilities"],
+            "update_μ_and_Λ": ["distributions", "parameters", "data", "vfe", "responsibilities"],
             "update_fixed_components": ["fixed_components"],
             "prior_initialization": ["initialization"]
         }

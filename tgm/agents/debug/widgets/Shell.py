@@ -88,7 +88,7 @@ class Shell(ctk.CTkFrame):
             textvariable=self.command
         )
         self.entry.bind("<FocusIn>", lambda x: self.entry.delete(0, "end"))
-        self.entry.bind('<Return>', self.execute_command)
+        self.entry.bind("<Return>", self.execute_command)
         self.entry.grid(row=0, column=0, sticky="nsew", padx=15)
 
         # History variables.
@@ -308,7 +308,7 @@ class Shell(ctk.CTkFrame):
             "x0_second": self.debugger.checkpoints[self.prev_gm]["gm"].x_second,
             "S0_second": self.debugger.checkpoints[self.prev_gm]["gm"].S_second,
             "gm0": self.debugger.checkpoints[self.prev_gm]["gm"],
-            "x1": self.debugger.checkpoints[self.next_gm]["gm_data"],
+            "x1": self.debugger.checkpoints[self.next_gm]["gm_data"].get(),
             "W1": self.debugger.checkpoints[self.next_gm]["gm"].W,
             "m1": self.debugger.checkpoints[self.next_gm]["gm"].m,
             "v1": self.debugger.checkpoints[self.next_gm]["gm"].v,
