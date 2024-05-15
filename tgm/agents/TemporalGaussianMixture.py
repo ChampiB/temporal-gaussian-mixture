@@ -10,9 +10,7 @@ from tgm.agents.models.TemporalModel import TemporalModel
 
 class TemporalGaussianMixture:
 
-    def __init__(
-        self, action_selection="softmax", n_states=10, n_observations=2, n_actions=5, learning_interval=100
-    ):
+    def __init__(self, action_selection="softmax", n_states=10, n_observations=2, n_actions=5, learning_interval=100):
 
         # Store the frequency at which learning is performed, and the number of actions.
         self.learning_interval = learning_interval

@@ -113,10 +113,6 @@ class GaussianMixtureModel:
             # Keep track of the number of inference steps.
             i += 1
 
-        # Try splitting the Gaussian components that are not fixed yet.
-        if split is True:
-            self.split_flexible_components(x_keep)
-
     @staticmethod
     def weighted_average(N_prime, x_prime, N_second, x_second, N):
         avg = torch.zeros_like(x_prime)
@@ -125,9 +121,6 @@ class GaussianMixtureModel:
         if N_second != 0:
             avg += N_second * x_second
         return avg / N
-
-    def split_flexible_components(self, x_keep):
-        pass  # TODO
 
     def is_initialized(self):
         return self.W is not None
@@ -235,6 +228,7 @@ class GaussianMixtureModel:
         debugger.before("update_fixed_components", auto_index=True)
         self.fixed_gaussian.update(self)
         debugger.after("update_fixed_components")
+        debugger.add_checkpoint("update_fixed_components")
 
     def compute_responsibilities(self, x, d="posterior"):
 

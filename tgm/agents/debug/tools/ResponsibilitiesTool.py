@@ -3,7 +3,7 @@ import math
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from PIL import Image
 from PIL.ImageTk import PhotoImage
-from torch import softmax
+from torch import softmax, digamma, logdet, tensor
 
 from tgm.agents.models.inference.GaussianMixture import GaussianMixture as GMix
 
@@ -78,10 +78,7 @@ class ResponsibilitiesTool(ctk.CTkFrame):
 
         # Create the equations.
         self.eq_frame = ctk.CTkFrame(self, bg_color=self.bg_color, fg_color=self.bg_color)
-        self.eq_images = [
-            PhotoImage(empty_image), PhotoImage(empty_image), PhotoImage(empty_image),
-            PhotoImage(empty_image), PhotoImage(empty_image)
-        ]
+        self.eq_images = [PhotoImage(empty_image) for _ in range(7)]
         self.eq_labels = [tk.Label(self.eq_frame, image=image) for image in self.eq_images]
 
         # Update the tool content, if an entry is selected in the navigation tree.
@@ -151,22 +148,32 @@ class ResponsibilitiesTool(ctk.CTkFrame):
         else:
             raise RuntimeError(f"[Error]: distribution type not supported '{distribution}'.")
 
-        log_D = GMix.expected_log_D(d).unsqueeze(dim=0)
+        n_states = len(W)
+        log_det_W = []
+        digamma_sum = []
+        for k in range(n_states):
+            digamma_sum.append(sum([digamma((v[k] + 1 - i) / 2) for i in range(n_states)]))
+            log_det_W.append(logdet(W[k]))
+        f_v = tensor(digamma_sum).unsqueeze(dim=0)
+        g_W = tensor(log_det_W).unsqueeze(dim=0)
         log_det_Λ = GMix.expected_log_det_Λ(W, v).unsqueeze(dim=0)
+        log_D = GMix.expected_log_D(d).unsqueeze(dim=0)
         quadratic_form = GMix.expected_quadratic_form(datum, m, β, W, v)
         log_ρ = log_D - 0.5 * (len(W) * math.log(2 * math.pi) - log_det_Λ + quadratic_form)
         r = softmax(log_ρ, dim=1)
 
-        tensors = {
+        matrices = {
             r"\mathbb{E}[\ln \mathbb{D}]": log_D,
-            r"\mathbb{E}[\ln |\boldsymbol{\Lambda}|]": log_det_Λ,
+            r"f(v)": f_v,
+            r"g(W)": g_W,
+            r"\mathbb{E}[\ln |\boldsymbol{\Lambda}|] = f(v) + g(W) + C": log_det_Λ,
             r"\mathbb{E}[(x - \mathbb{\mu})^\top \boldsymbol{\Lambda} (x - \mathbb{\mu})]": quadratic_form,
             r"\ln \rho": log_ρ,
             r"\hat{r}": r
         }
-        for i, (name, tensor) in enumerate(tensors.items()):
+        for i, (name, matrix) in enumerate(matrices.items()):
             image = MatPlotLib.draw_equation(
-                f"{name} = " + Shell.to_latex_format(tensor),
+                f"{name} = " + Shell.to_latex_format(matrix),
                 self.to_rgb(self.bg_color), self.to_rgb(self.text_color), 50, 10
             )
             self.display_image(image, i)
@@ -179,6 +186,4 @@ class ResponsibilitiesTool(ctk.CTkFrame):
         self.eq_images[i] = image
         self.eq_labels[i].grid_forget()
         self.eq_labels[i] = image.get_tk_widget()
-        self.eq_labels[i].grid(
-            row=i, column=0, sticky="w", padx=15, pady=15
-        )
+        self.eq_labels[i].grid(row=i, column=0, sticky="w", padx=15, pady=15)

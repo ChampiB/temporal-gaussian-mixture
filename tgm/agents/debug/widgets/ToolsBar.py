@@ -56,6 +56,11 @@ class ToolsBar:
             command=partial(update_tool, name="data")
         )
 
+        self.ws_button = ctk.CTkButton(
+            parent, text="W", width=size, height=size, corner_radius=0, font=font,
+            command=partial(update_tool, name="ws")
+        )
+
         self.buttons = {
             "distributions": self.distributions_button,
             "parameters": self.parameters_button,
@@ -63,7 +68,8 @@ class ToolsBar:
             "vfe": self.vfe_button,
             "fixed_components": self.components_button,
             "initialization": self.initialization_button,
-            "responsibilities": self.responsibilities_button
+            "responsibilities": self.responsibilities_button,
+            "ws": self.ws_button
         }
 
     def update_displayed_tools(self, tool_names):

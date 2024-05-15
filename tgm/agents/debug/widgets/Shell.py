@@ -223,6 +223,10 @@ class Shell(ctk.CTkFrame):
         :param matrix: the matrix to format
         :return: the formatted matrix
         """
+        if isinstance(matrix, str):
+            return matrix
+        if len(matrix.shape) == 0:
+            return f"{matrix.item():0.5f}"
         n_rows, n_cols = matrix.shape
         if n_rows == 0 or n_cols == 0:
             return "[]"
