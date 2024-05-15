@@ -34,7 +34,7 @@ class TemporalGaussianMixture:
 
         # Train the agent.
         steps_done = 0
-        while steps_done <= 1000:
+        while steps_done <= 2000:
 
             # Select the next action, and execute it in the environment.
             action = self.step(obs)
@@ -72,11 +72,13 @@ class TemporalGaussianMixture:
 
         # Fit the Gaussian mixture and temporal model.
         gm_x_forget, gm_x_keep = self.gm_data.get(split=True)
-        debugger.before("fit", auto_index=True)
+        debugger.before("gm_fit", auto_index=True)
         self.gm.fit(gm_x_forget, gm_x_keep, debugger)
-        debugger.after("fit")
+        debugger.after("gm_fit")
         tm_x_forget, tm_x_keep = self.tm_data.get(self.gm, split=True)
+        debugger.before("tm_fit", auto_index=True)
         self.tm.fit(tm_x_forget, tm_x_keep)
+        debugger.after("tm_fit")
 
         # Update the components which are considered fixed.
         self.gm.update_fixed_components(debugger)

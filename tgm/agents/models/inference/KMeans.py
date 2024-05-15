@@ -13,9 +13,9 @@ class KMeans:
     def init_gm(x, n_observations, n_states, debug=False):
 
         # Initialize the degrees of freedom, as well as the scale and Dirichlet parameters.
-        v = (n_observations - 0.99) * torch.ones([n_states])
-        d = torch.ones([n_states])
-        β = torch.ones([n_states])
+        v = (n_observations - 0.99 + n_states) * torch.ones([n_states])
+        d = torch.ones([n_states]) * n_states
+        β = torch.ones([n_states]) * n_states
 
         # Perform K-means to initialize the parameter of the posterior over latent variables at time step 1.
         m, r = KMeans.run(x, n_states, debug=debug)
