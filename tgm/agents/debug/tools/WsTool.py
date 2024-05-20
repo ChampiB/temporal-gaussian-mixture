@@ -34,7 +34,7 @@ class WsTool(ctk.CTkFrame):
         if selected is None:
             self.selection_label.grid(row=0, column=0, sticky="nsew")
 
-        # Create the combo box to allow the user to select a distribution.
+        # Create the combo box to allow the user to select a component.
         self.k_frame = ctk.CTkFrame(self, bg_color=self.bg_color, fg_color=self.bg_color)
         self.k_label = ctk.CTkLabel(self.k_frame, text="k:", font=font)
         self.k_combobox = ctk.CTkComboBox(

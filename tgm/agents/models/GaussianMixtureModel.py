@@ -36,7 +36,7 @@ class GaussianMixtureModel:
         self.N_prime = self.x_prime = self.S_prime = None
         self.N_second = self.x_second = self.S_second = None
 
-    def fit(self, x_forget, x_keep, debugger, split=True, threshold=1):
+    def fit(self, x_forget, x_keep, debugger, threshold=1):
 
         n_steps = 0
         i = 0
@@ -142,9 +142,9 @@ class GaussianMixtureModel:
             init_fc[init_type](x, self.n_observations, self.n_states)
 
         # Retrieve the parameters of the flexible components.
-        fixed_components = self.fixed_gaussian.new_indices_of(
+        fixed_components = list(self.fixed_gaussian.new_indices_of(
             self.v_fixed, self.m_fixed, self.W_fixed, self.v, self.m, self.W
-        )
+        ).values())
         flexible_components = [k for k in range(len(self.m)) if k not in fixed_components]
         self.v, self.d, self.β, self.m, self.W = self.parameters_of(flexible_components)
 
@@ -157,6 +157,7 @@ class GaussianMixtureModel:
                 self.v_fixed, self.d_fixed, self.β_fixed, self.m_fixed, self.W_fixed,
                 self.v, self.d, self.β, self.m, self.W
             )
+            self.fixed_gaussian.reindex()
 
         # Initialize the empirical prior parameters.
         self.v_bar, self.d_bar, self.β_bar, self.m_bar, self.W_bar = GMix.clone(self.v, self.d, self.β, self.m, self.W)

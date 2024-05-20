@@ -18,7 +18,7 @@ def run(maze_index=8, max_episode_length=50, debug=True):
     # Create the debugger, train the agent on the environment, and start the debugger GUI.
     debugger = Debugger(model, debug)
     model.train(env, debugger)
-    debugger.run()
+    debugger.run(env)
 
 
 if __name__ == '__main__':

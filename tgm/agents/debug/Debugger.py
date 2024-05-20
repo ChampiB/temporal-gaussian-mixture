@@ -44,14 +44,14 @@ class Debugger:
         # - data = {"fit_1": [0, 3], "fit_1.vi_step_1": [0, 3], "fit_1.vi_step_1.update_Z": [0, 1], ...}
         self.data = []
 
-    def run(self):
+    def run(self, env):
 
         # Check that debugging is required.
         if self.debug is False:
             return
 
         # Create and run the debugger's graphical user interface.
-        gui = DebuggerGUI(self.data, self.checkpoints)
+        gui = DebuggerGUI(self.data, self.checkpoints, env.action_names)
         gui.run()
 
     def before(self, prefix, auto_index=False, new_checkpoint=True):

@@ -18,7 +18,7 @@ class TemporalGaussianMixture:
 
         # Create the perception and temporal models, as well as the action selection strategy.
         self.gm = GaussianMixtureModel(n_states, n_observations)
-        self.tm = TemporalModel(n_states)
+        self.tm = TemporalModel(n_actions, n_states)
         self.action_selection = ActionSelectionFactory.create(action_selection)  # TODO should this become the planner?
 
         # Create the dataset and the model's views.
@@ -77,7 +77,7 @@ class TemporalGaussianMixture:
         debugger.after("gm_fit")
         tm_x_forget, tm_x_keep = self.tm_data.get(self.gm, split=True)
         debugger.before("tm_fit", auto_index=True)
-        self.tm.fit(tm_x_forget, tm_x_keep)
+        self.tm.fit(self.gm, tm_x_forget, tm_x_keep)
         debugger.after("tm_fit")
 
         # Update the components which are considered fixed.
@@ -94,6 +94,7 @@ class TemporalGaussianMixture:
         dataset = self.dataset.clone()
         return {
             "gm": self.gm.clone(),
+            "tm": self.tm.clone(),
             "dataset": dataset,
             "gm_data": GaussianMixtureView(dataset),
             "tm_data": TemporalModelView(dataset)

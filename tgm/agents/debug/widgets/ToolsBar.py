@@ -1,4 +1,3 @@
-import tkinter as tk
 import customtkinter as ctk
 from functools import partial
 from os.path import join
@@ -61,6 +60,11 @@ class ToolsBar:
             command=partial(update_tool, name="ws")
         )
 
+        self.bs_button = ctk.CTkButton(
+            parent, text="B", width=size, height=size, corner_radius=0, font=font,
+            command=partial(update_tool, name="bs")
+        )
+
         self.buttons = {
             "distributions": self.distributions_button,
             "parameters": self.parameters_button,
@@ -69,7 +73,8 @@ class ToolsBar:
             "fixed_components": self.components_button,
             "initialization": self.initialization_button,
             "responsibilities": self.responsibilities_button,
-            "ws": self.ws_button
+            "ws": self.ws_button,
+            "bs": self.bs_button
         }
 
     def update_displayed_tools(self, tool_names):

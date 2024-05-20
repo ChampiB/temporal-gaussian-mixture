@@ -1,7 +1,10 @@
+from functools import partial
+
 import customtkinter as ctk
 from screeninfo import get_monitors
 import matplotlib as mpl
 
+from tgm.agents.debug.tools.BsTool import BsTool
 from tgm.agents.debug.tools.CostTool import CostTool
 from tgm.agents.debug.tools.DatasetTool import DatasetTool
 from tgm.agents.debug.tools.DistributionsTool import DistributionsTool
@@ -16,11 +19,12 @@ from tgm.agents.debug.widgets.TreeView import TreeView
 
 class DebuggerGUI:
 
-    def __init__(self, data, checkpoints):
+    def __init__(self, data, checkpoints, action_names):
 
-        # Save the tree view data and associated checkpoints.
+        # Save the tree view data, associated checkpoints, and environment's action names.
         self.data = data
         self.checkpoints = checkpoints
+        self.action_names = action_names
 
         # Set the mode and theme, as well as matplotlib backend.
         ctk.set_appearance_mode("dark")
@@ -54,7 +58,8 @@ class DebuggerGUI:
             "fixed_components": FixedComponentsTool,
             "initialization": InitializationTool,
             "responsibilities": ResponsibilitiesTool,
-            "ws": WsTool
+            "ws": WsTool,
+            "bs": partial(BsTool, action_names=self.action_names)
         }
         self.tool_instances = {
             "distributions": None,
@@ -64,7 +69,8 @@ class DebuggerGUI:
             "fixed_components": None,
             "initialization": None,
             "responsibilities": None,
-            "ws": None
+            "ws": None,
+            "bs": None
         }
         self.current_tool_name = "distributions"
         self.current_tool = None
@@ -102,7 +108,8 @@ class DebuggerGUI:
 
         # Update the tools in the tools bar.
         tools_to_display = {
-            "fit": ["distributions", "parameters", "data", "vfe", "responsibilities", "ws"],
+            "tm_fit": ["bs"],
+            "gm_fit": ["distributions", "parameters", "data", "vfe", "responsibilities", "ws"],
             "vi_step": ["distributions", "parameters", "data", "vfe", "responsibilities", "ws"],
             "update_Z": ["distributions", "parameters", "data", "vfe", "responsibilities", "ws"],
             "update_D": ["distributions", "parameters", "data", "vfe", "responsibilities", "ws"],

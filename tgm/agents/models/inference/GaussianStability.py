@@ -17,6 +17,57 @@ class GaussianStability:
         self.fixed_n_steps = None
         self.β_hat = self.d_hat = self.m_hat = self.W_hat = self.v_hat = self.N = None
 
+    def reindex(self):
+        """
+        Reindex the components such that the fixed components have indices equal to 0, 1, ..., |fixed_components| - 1
+        """
+
+        # Retrieve the flexible components.
+        flexible_components = [k for k in range(len(self.m_hat)) if k not in self.fixed_components]
+
+        # Create the re-indexed parameters.
+        n_states = len(self.m_hat)
+        reindex_v = torch.zeros([n_states])
+        reindex_d = torch.zeros([n_states])
+        reindex_β = torch.zeros([n_states])
+        reindex_m = []
+        reindex_W = []
+        reindex_N = torch.zeros([n_states])
+        fixed_components = []
+        fixed_n_steps = torch.ones_like(self.fixed_n_steps)
+
+        # Extract the parameters of the fixed components.
+        for j, component in enumerate(self.fixed_components):
+            reindex_v[j] = self.v_hat[component]
+            reindex_d[j] = self.d_hat[component]
+            reindex_β[j] = self.β_hat[component]
+            reindex_m.append(self.m_hat[component].clone())
+            reindex_W.append(self.W_hat[component].clone())
+            reindex_N[j] = self.N[component]
+            fixed_components.append(j)
+            fixed_n_steps[j] = self.fixed_n_steps[component]
+
+        # Extract the parameters of the flexible components.
+        shift = len(self.fixed_components)
+        for j, component in enumerate(flexible_components):
+            reindex_v[shift + j] = self.v_hat[component]
+            reindex_d[shift + j] = self.d_hat[component]
+            reindex_β[shift + j] = self.β_hat[component]
+            reindex_m.append(self.m_hat[component].clone())
+            reindex_W.append(self.W_hat[component].clone())
+            reindex_N[shift + j] = self.N[component]
+            fixed_n_steps[shift + j] = self.fixed_n_steps[component]
+
+        # Update the internal parameters.
+        self.v_hat = reindex_v
+        self.d_hat = reindex_d
+        self.β_hat = reindex_β
+        self.m_hat = reindex_m
+        self.W_hat = reindex_W
+        self.N = reindex_N
+        self.fixed_components = fixed_components
+        self.fixed_n_steps = fixed_n_steps
+
     def update(self, gm):
 
         # Update number of steps for which components have remained fixed, and the list of fixed components.
@@ -67,9 +118,9 @@ class GaussianStability:
 
     def new_indices_of(self, v0, m0, W0, v1, m1, W1):
         if v0 is None or m0 is None or W0 is None:
-            return []
+            return {}
 
-        new_indices = []
+        new_indices = {}
         for k in range(v0.shape[0]):
             precision0 = W0[k] * v0[k]
 
@@ -86,9 +137,30 @@ class GaussianStability:
 
             # Add the index corresponding to the smallest KL-divergence.
             if min_index != -1 and min_kl < self.kl_threshold:
-                new_indices.append(min_index)
+                new_indices[k] = min_index
 
         return new_indices
+
+    def parameters_of(self, components):
+
+        if len(components) == 0:
+            return None, None, None, None, None
+
+        # Extract the parameters of the fixed components.
+        n_states = len(components)
+        extracted_v = torch.zeros([n_states])
+        extracted_d = torch.zeros([n_states])
+        extracted_β = torch.zeros([n_states])
+        extracted_m = []
+        extracted_W = []
+        for j, component in enumerate(components):
+            extracted_v[j] = self.v_hat[component]
+            extracted_d[j] = self.d_hat[component]
+            extracted_β[j] = self.β_hat[component]
+            extracted_m.append(self.m_hat[component].clone())
+            extracted_W.append(self.W_hat[component].clone())
+
+        return extracted_v, extracted_d, extracted_β, extracted_m, extracted_W
 
     @staticmethod
     def kl_gaussian(m0, precision0, m1, precision1):
