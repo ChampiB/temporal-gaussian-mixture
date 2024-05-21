@@ -91,28 +91,35 @@ class GaussianStability:
         # Iterate over all pairs of new and old states.
         js_assigned = []
         for k in range(v0.shape[0]):
-            if N0[k] == 0:
-                continue
             precision0 = W0[k] * v0[k]
+
+            # Compute the smallest KL-divergence, between the k-th (old) components, and the new components.
+            min_kl = math.inf
+            min_j = 0
             for j in range(v1.shape[0]):
-                if j in js_assigned or N1[j] == 0:
+                if j in js_assigned:
                     continue
                 precision1 = W1[j] * v1[j]
 
                 # If the KL-divergence between the Gaussian components is small enough.
                 kl = self.kl_gaussian(m0[k], precision0, m1[j], precision1)
-                if kl < self.kl_threshold:
+                if kl < min_kl:
+                    min_kl = kl
+                    min_j = j
 
-                    # Increase the number of steps associated to this component.
-                    fixed_n_steps_1[j] += fixed_n_steps_0[k]
-                    js_assigned.append(j)
+            # If the minimum KL-divergence is small enough,
+            # transfer the counts of the k-th components to the j-th component, and update the new fixed components.
+            if min_kl < self.kl_threshold:
 
-                    # If this component was fixed or the number of steps is greater than the threshold,
-                    # add the component to the fixed components.
-                    if k in self.fixed_components or fixed_n_steps_1[j] > self.n_steps_threshold:
-                        if j not in fixed_components_1:
-                            fixed_components_1.append(j)
-                    break
+                # Increase the number of steps associated to this component.
+                fixed_n_steps_1[min_j] += fixed_n_steps_0[k]
+                js_assigned.append(min_j)
+
+                # If this component was fixed or the number of steps is greater than the threshold,
+                # add the component to the fixed components.
+                if k in self.fixed_components or fixed_n_steps_1[min_j] > self.n_steps_threshold:
+                    if min_j not in fixed_components_1:
+                        fixed_components_1.append(min_j)
 
         return fixed_n_steps_1, fixed_components_1
 
