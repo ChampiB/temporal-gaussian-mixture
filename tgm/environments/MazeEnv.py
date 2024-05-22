@@ -134,7 +134,7 @@ class MazeEnv(gym.Env):
             self.y_pos -= 1.0
 
         # Return true of the state is terminal and false otherwise.
-        return False, 0
+        return False, -1.0
 
     def up(self):
         """
@@ -147,7 +147,7 @@ class MazeEnv(gym.Env):
             self.y_pos += 1.0
 
         # Return true of the state is terminal and false otherwise.
-        return False, 0
+        return False, -1.0
 
     def right(self):
         """
@@ -160,7 +160,7 @@ class MazeEnv(gym.Env):
             self.x_pos += 1.0
 
         # Return true of the state is terminal and false otherwise.
-        return False, 0
+        return False, -1.0
 
     def left(self):
         """
@@ -173,7 +173,7 @@ class MazeEnv(gym.Env):
             self.x_pos -= 1.0
 
         # Return true of the state is terminal and false otherwise.
-        return False, 0
+        return False, -1.0
 
     def eat(self):
         """
@@ -183,7 +183,7 @@ class MazeEnv(gym.Env):
 
         # Return true of the state is terminal and false otherwise.
         is_terminal = self.is_terminal_state()
-        return is_terminal, 1 if is_terminal else 0
+        return is_terminal, 1 if is_terminal else -1.0
 
     #
     # Reward computation

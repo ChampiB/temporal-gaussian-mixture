@@ -11,6 +11,7 @@ from tgm.agents.debug.tools.DistributionsTool import DistributionsTool
 from tgm.agents.debug.tools.FixedComponentsTool import FixedComponentsTool
 from tgm.agents.debug.tools.InitializationTool import InitializationTool
 from tgm.agents.debug.tools.ParametersTool import ParametersTool
+from tgm.agents.debug.tools.QValuesTool import QValuesTool
 from tgm.agents.debug.tools.ResponsibilitiesTool import ResponsibilitiesTool
 from tgm.agents.debug.tools.WsTool import WsTool
 from tgm.agents.debug.widgets.ToolsBar import ToolsBar
@@ -59,7 +60,8 @@ class DebuggerGUI:
             "initialization": InitializationTool,
             "responsibilities": ResponsibilitiesTool,
             "ws": WsTool,
-            "bs": partial(BsTool, action_names=self.action_names)
+            "bs": partial(BsTool, action_names=self.action_names),
+            "q_values": partial(QValuesTool, action_names=self.action_names)
         }
         self.tool_instances = {
             "distributions": None,
@@ -70,7 +72,8 @@ class DebuggerGUI:
             "initialization": None,
             "responsibilities": None,
             "ws": None,
-            "bs": None
+            "bs": None,
+            "q_values": None
         }
         self.current_tool_name = "distributions"
         self.current_tool = None
@@ -108,6 +111,7 @@ class DebuggerGUI:
 
         # Update the tools in the tools bar.
         tools_to_display = {
+            "planner_fit": ["q_values"],
             "tm_fit": ["bs"],
             "gm_fit": ["distributions", "parameters", "data", "vfe", "responsibilities", "ws"],
             "vi_step": ["distributions", "parameters", "data", "vfe", "responsibilities", "ws"],

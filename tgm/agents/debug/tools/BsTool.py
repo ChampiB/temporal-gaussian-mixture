@@ -60,8 +60,8 @@ class BsTool(ctk.CTkFrame):
         self.distribution1_combobox.grid(row=0, column=1, sticky="nsew", padx=(5, 15))
 
         # Variables storing the indices of the previous and next Gaussian mixture displayed.
-        self.prev_gm = -1
-        self.next_gm = -1
+        self.prev_tm = -1
+        self.next_tm = -1
 
         # Variables storing the type of distribution displayed on the right and left hand side.
         self.prev_distribution = "prior"
@@ -119,31 +119,31 @@ class BsTool(ctk.CTkFrame):
             self.b1_frame.grid(row=1, column=3)
             self.distribution1_frame.grid(row=2, column=3, sticky="nsew", padx=40, pady=20)
 
-        # Update the equations figures.
+        # Update the B matrices displayed.
         distribution0 = self.distribution0_combobox.get().replace(" ", "_")
         distribution1 = self.distribution1_combobox.get().replace(" ", "_")
-        prev_gm = tags[0]
-        next_gm = tags[-1]
+        prev_tm = tags[0]
+        next_tm = tags[-1]
 
         a = 0
         for y in range(len(self.b0_labels)):
             for x in range(len(self.b0_labels[y])):
 
                 # Update the labels corresponding to the previous Gaussian mixture.
-                if prev_gm != self.prev_gm or distribution0 != self.prev_distribution:
-                    self.update_image(y, x, 0, self.cache(checkpoints, distribution0, prev_gm, a))
+                if prev_tm != self.prev_tm or distribution0 != self.prev_distribution:
+                    self.update_image(y, x, 0, self.cache(checkpoints, distribution0, prev_tm, a))
 
                 # Update the labels corresponding to the next Gaussian mixture.
-                if next_gm != self.next_gm or distribution1 != self.next_distribution:
-                    self.update_image(y, x, 1, self.cache(checkpoints, distribution1, next_gm, a))
+                if next_tm != self.next_tm or distribution1 != self.next_distribution:
+                    self.update_image(y, x, 1, self.cache(checkpoints, distribution1, next_tm, a))
 
                 a += 1
 
         # Update the indices of the previous and next Gaussian mixture.
         self.prev_distribution = distribution0
-        self.prev_gm = prev_gm
+        self.prev_tm = prev_tm
         self.next_distribution = distribution1
-        self.next_gm = next_gm
+        self.next_tm = next_tm
 
     def to_rgb(self, color):
         return tuple(((c // 256) / 255 for c in self.root.winfo_rgb(color)))

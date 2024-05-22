@@ -77,6 +77,22 @@ class TemporalModel:
 
         return tm
 
+    def B(self, d="posterior"):
+
+        if d == "prior":
+            B = self.b.clone()
+        elif d == "empirical_prior":
+            B = self.b_bar.clone()
+        elif d == "posterior":
+            B = self.b_hat.clone()
+        else:
+            raise RuntimeError(f"Unsupported distribution type '{d}'.")
+
+        # Normalize the columns of all matrices.
+        n_states = B.shape[1]
+        sum_B = B.sum(dim=1, keepdims=True).repeat(1, n_states, 1)
+        return B / sum_B
+
     def draw_b_matrix(self, action, d="posterior", action_names=None):
 
         if action >= self.b.shape[0]:

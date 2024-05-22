@@ -13,7 +13,7 @@ def run(maze_index=8, max_episode_length=50, debug=True):
     env = MazeEnv(path, max_episode_length)
 
     # Create the temporal Gaussian mixture model.
-    model = TemporalGaussianMixture()
+    model = TemporalGaussianMixture(action_selection="epsilon_greedy")
 
     # Create the debugger, train the agent on the environment, and start the debugger GUI.
     debugger = Debugger(model, debug)

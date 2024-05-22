@@ -65,6 +65,11 @@ class ToolsBar:
             command=partial(update_tool, name="bs")
         )
 
+        self.q_values_button = ctk.CTkButton(
+            parent, text="Q", width=size, height=size, corner_radius=0, font=font,
+            command=partial(update_tool, name="q_values")
+        )
+
         self.buttons = {
             "distributions": self.distributions_button,
             "parameters": self.parameters_button,
@@ -74,7 +79,8 @@ class ToolsBar:
             "initialization": self.initialization_button,
             "responsibilities": self.responsibilities_button,
             "ws": self.ws_button,
-            "bs": self.bs_button
+            "bs": self.bs_button,
+            "q_values": self.q_values_button
         }
 
     def update_displayed_tools(self, tool_names):

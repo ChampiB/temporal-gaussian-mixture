@@ -108,7 +108,7 @@ class GaussianStability:
                     min_j = j
 
             # If the minimum KL-divergence is small enough,
-            # transfer the counts of the k-th components to the j-th component, and update the new fixed components.
+            # transfer the counts of the k-th component to the j-th component, and update the new fixed components.
             if min_kl < self.kl_threshold:
 
                 # Increase the number of steps associated to this component.

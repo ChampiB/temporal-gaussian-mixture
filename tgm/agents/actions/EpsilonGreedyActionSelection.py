@@ -8,7 +8,7 @@ class EpsilonGreedyActionSelection:
     Class performing epsilon-greedy action selection.
     """
 
-    def __init__(self, epsilon_start=0.9, epsilon_end=0.05, epsilon_decay=100000, **_):
+    def __init__(self, epsilon_start=1.0, epsilon_end=0.0, epsilon_decay=2000, **_):
         """
         Construct an epsilon-greedy action selection strategy.
         :param epsilon_start: the initial value of epsilon.

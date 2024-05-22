@@ -360,7 +360,7 @@ class MatPlotLib:
         return fig
 
     @staticmethod
-    def draw_matrix(matrix, title="", draw_values=True, log_scale=False, mask=None):
+    def draw_matrix(matrix, title="", draw_values=True, log_scale=False, mask=None, y_ticks=None):
 
         # Create a figure.
         fig = plt.figure()
@@ -389,6 +389,11 @@ class MatPlotLib:
                         plt.gca().add_patch(Rectangle(
                             (i - 0.5, j - 0.5), 1, 1, fc=(0.5, 0.5, 0.5, 0.5), ec="orange", lw=1
                         ))
+
+        # Change the y-ticks, if needed.
+        if y_ticks is not None:
+            plt.gca().set_yticks([y for y in range(len(y_ticks))])
+            plt.gca().set_yticklabels(y_ticks)
 
         # Return the figure.
         return fig
