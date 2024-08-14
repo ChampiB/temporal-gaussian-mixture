@@ -93,26 +93,33 @@ class TemporalModel:
         sum_B = B.sum(dim=1, keepdims=True).repeat(1, n_states, 1)
         return B / sum_B
 
-    def draw_b_matrix(self, action, d="posterior", action_names=None):
+    def draw_b_matrix(self, action, d="posterior", action_names=None, dirichlet_params=False):
 
         if action >= self.b.shape[0]:
             return None
 
         action_name = action if action_names is None else action_names[action]
+        fig_size = [7.2, 6.2]
 
         if d == "prior":
+            b = self.b if dirichlet_params is True else self.B()
             return MatPlotLib.draw_matrix(
-                self.b[action], title=f"Prior concentration coefficient, action = {action_name}."
+                b[action], title=f"Prior concentration coefficient, action = {action_name}.",
+                fig_size=fig_size
             )
 
         if d == "empirical_prior":
+            b = self.b_bar if dirichlet_params is True else self.B()
             return MatPlotLib.draw_matrix(
-                self.b_bar[action], title=f"Empirical prior concentration coefficient, action = {action_name}."
+                b[action], title=f"Empirical prior concentration coefficient, action = {action_name}.",
+                fig_size=fig_size
             )
 
         if d == "posterior":
+            b = self.b_hat if dirichlet_params is True else self.B()
             return MatPlotLib.draw_matrix(
-                self.b_hat[action], title=f"Posterior concentration coefficient, action = {action_name}."
+                b[action], title=f"Posterior concentration coefficient, action = {action_name}.",
+                fig_size=fig_size
             )
 
         raise RuntimeError(f"Unsupported distribution type '{d}'.")

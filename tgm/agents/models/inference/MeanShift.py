@@ -23,9 +23,9 @@ class MeanShift:
         r = one_hot(torch.from_numpy(r), n_classes)
 
         # Initialize the degrees of freedom, as well as the scale and Dirichlet parameters.
-        v = (n_observations - 0.99 + n_states) * torch.ones([n_classes])
-        d = torch.ones([n_classes]) * n_states
-        β = torch.ones([n_classes]) * n_states
+        v = (n_observations - 0.99 + n_classes * 2) * torch.ones([n_classes])
+        d = torch.ones([n_classes]) * n_classes * 2
+        β = torch.ones([n_classes]) * n_classes * 2
 
         # Estimate the covariance of the clusters and use it to initialize the Wishart prior and posterior.
         precision = KMeans.precision(x, r)

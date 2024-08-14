@@ -14,6 +14,7 @@ class Dataset:
         self.d = []
 
         # List storing whether the points can be forgotten.
+        self.ignore_next = []
         self.forgettable = []
 
     def start_new_trial(self, obs):
@@ -21,6 +22,7 @@ class Dataset:
         self.a.append(None)
         self.r.append(None)
         self.d.append(False)
+        self.ignore_next.append(False)
         self.forgettable.append(False)
 
     def append(self, obs, action, reward, done):
@@ -29,6 +31,7 @@ class Dataset:
         self.a.append(None)
         self.r.append(reward)
         self.d.append(done)
+        self.ignore_next.append(done)
         self.forgettable.append(False)
 
     @property
@@ -66,10 +69,10 @@ class Dataset:
         self.forgettable = forgettable
 
     def is_start_of_trial(self, i):
-        return i == 0 or self.d[i - 1] is True
+        return i == 0 or self.ignore_next[i - 1] is True
 
     def is_end_of_trial(self, i):
-        return self.d[i] is True
+        return self.ignore_next[i] is True
 
     def forget(self):
 
@@ -78,17 +81,19 @@ class Dataset:
         new_a = []
         new_r = []
         new_d = []
+        new_ignore_next = []
         new_forgettable = []
 
         # Add to the data points to keep in the lists, i.e., forget the rest.
         update_done = False
-        for x, a, r, d, forgettable in reversed(list(zip(self.x, self.a, self.r, self.d, self.forgettable))):
-            if forgettable is False:
+        for x, a, r, d, i, f in reversed(list(zip(self.x, self.a, self.r, self.d, self.ignore_next, self.forgettable))):
+            if f is False:
                 new_x.insert(0, x)
                 new_a.insert(0, a)
                 new_r.insert(0, r)
-                new_d.insert(0, True if update_done is True else d)
-                new_forgettable.insert(0, forgettable)
+                new_d.insert(0, d)
+                new_ignore_next.insert(0, update_done or d or i)
+                new_forgettable.insert(0, f)
                 update_done = False
             else:
                 update_done = True
@@ -99,6 +104,7 @@ class Dataset:
         self.r = new_r
         self.d = new_d
         self.forgettable = new_forgettable
+        self.ignore_next = new_ignore_next
 
     def clone(self):
         dataset = Dataset()
@@ -107,4 +113,5 @@ class Dataset:
         dataset.r = deepcopy(self.r)
         dataset.d = deepcopy(self.d)
         dataset.forgettable = deepcopy(self.forgettable)
+        dataset.ignore_next = deepcopy(self.ignore_next)
         return dataset

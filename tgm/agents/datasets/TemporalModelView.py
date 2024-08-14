@@ -52,7 +52,7 @@ class TemporalModelView:
         r1_keep = []
         a0_keep = []
         for i in range(len(self.dataset.x) - 1):
-            if self.dataset.d[i] is False:
+            if self.dataset.d[i] is False and self.dataset.ignore_next[i] is False:
                 if self.dataset.forgettable[i] is True or self.dataset.forgettable[i + 1] is True:
                     a0_forget.append(self.dataset.a[i])
                     r0_forget.append(r_hat[i])

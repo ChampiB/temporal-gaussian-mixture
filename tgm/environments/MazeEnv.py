@@ -21,7 +21,7 @@ class MazeEnv(gym.Env):
         super(MazeEnv, self).__init__()
 
         self.np_precision = np.float64
-        self.action_space = spaces.Discrete(4)
+        self.action_space = spaces.Discrete(5)
         self.observation_space = spaces.Box(low=-np.inf, high=np.inf, shape=(2,), dtype=self.np_precision)
 
         self.end_state = None

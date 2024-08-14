@@ -29,7 +29,7 @@ class GaussianMixtureModel:
         self.W_hat = self.m_hat = self.v_hat = self.β_hat = self.d_hat = self.r_hat = None
 
         # List of indices corresponding to fixed components.
-        self.fixed_gaussian = GaussianStability(kl_threshold=0.5, n_steps_threshold=4)
+        self.fixed_gaussian = GaussianStability(kl_threshold=0.5, n_steps_threshold=10, min_n_steps_threshold=10)
 
         # Pre-computed terms.
         self.log_D = self.log_det_Λ = self.N = self.x_bar = self.S = self.vfe = None
@@ -42,15 +42,16 @@ class GaussianMixtureModel:
         i = 0
         while n_steps < 5 and i < 100:
 
-            # Notify the debugger that a step of variational inference and a Z update are starting.
-            debugger.before("vi_step", auto_index=True)
-            debugger.before("update_Z", new_checkpoint=False)
-
             # Keep track of previous variational free energy.
             vfe = self.vfe
             if vfe.isnan().any():
                 print("[Warning] The VFE is 'not a number'.")
                 break
+
+            # Notify the debugger that a step of variational inference and a Z update are starting.
+            if debugger is not None:
+                debugger.before("vi_step", auto_index=True)
+                debugger.before("update_Z", new_checkpoint=False)
 
             # Update for Z (forgettable data points).
             self.r_bar = self.compute_responsibilities(x_forget)
@@ -79,8 +80,9 @@ class GaussianMixtureModel:
             self.x_bar = Dataset.to_tensor(self.x_bar)
 
             # Notify the debugger that a Z update is ending and that a D update is starting.
-            debugger.after("update_Z")
-            debugger.before("update_D", new_checkpoint=False)
+            if debugger is not None:
+                debugger.after("update_Z")
+                debugger.before("update_D", new_checkpoint=False)
 
             # Update for D.
             self.d_bar = self.d + self.N_prime
@@ -88,8 +90,9 @@ class GaussianMixtureModel:
             self.log_D = GMix.expected_log_D(self.d_hat)
 
             # Notify the debugger that a D update is ending and that a μ and Λ update is starting.
-            debugger.after("update_D")
-            debugger.before("update_μ_and_Λ", new_checkpoint=False)
+            if debugger is not None:
+                debugger.after("update_D")
+                debugger.before("update_μ_and_Λ", new_checkpoint=False)
 
             # Update for μ and Λ.
             self.v_bar = self.v + self.N_prime
@@ -107,8 +110,9 @@ class GaussianMixtureModel:
             n_steps = n_steps + 1 if float(vfe - self.vfe) < threshold else 0
 
             # Notify the debugger that a μ and Λ update, as well as a step of variational inference are ending.
-            debugger.after("update_μ_and_Λ")
-            debugger.after("vi_step", new_checkpoint=False)
+            if debugger is not None:
+                debugger.after("update_μ_and_Λ")
+                debugger.after("vi_step", new_checkpoint=False)
 
             # Keep track of the number of inference steps.
             i += 1
@@ -131,7 +135,8 @@ class GaussianMixtureModel:
         self.v_fixed, self.d_fixed, self.β_fixed, self.m_fixed, self.W_fixed = self.parameters_of(self.fixed_components)
 
         # Add checkpoint from which fixed component parameters can be accessed.
-        debugger.before("prior_initialization", auto_index=True)
+        if debugger is not None:
+            debugger.before("prior_initialization", auto_index=True)
 
         # Compute all the component parameters.
         init_fc = {
@@ -149,7 +154,8 @@ class GaussianMixtureModel:
         self.v, self.d, self.β, self.m, self.W = self.parameters_of(flexible_components)
 
         # Add checkpoint from which flexible component parameters can be accessed.
-        debugger.middle("prior_initialization")
+        if debugger is not None:
+            debugger.middle("prior_initialization")
 
         # Merge the parameters of the fixed and flexible components.
         if self.v_fixed is not None:
@@ -175,7 +181,8 @@ class GaussianMixtureModel:
         self.vfe = GMix.vfe(self)
 
         # Add checkpoint from which all component parameters can be accessed.
-        debugger.after("prior_initialization")
+        if debugger is not None:
+            debugger.after("prior_initialization")
 
     @staticmethod
     def merge(v0, d0, β0, m0, W0, v1, d1, β1, m1, W1):
@@ -226,10 +233,12 @@ class GaussianMixtureModel:
         return extracted_v, extracted_d, extracted_β, extracted_m, extracted_W
 
     def update_fixed_components(self, debugger):
-        debugger.before("update_fixed_components", auto_index=True)
+        if debugger is not None:
+            debugger.before("update_fixed_components", auto_index=True)
         self.fixed_gaussian.update(self)
-        debugger.after("update_fixed_components")
-        debugger.add_checkpoint("update_fixed_components")
+        if debugger is not None:
+            debugger.after("update_fixed_components")
+            debugger.add_checkpoint("update_fixed_components")
 
     def compute_responsibilities(self, x, d="posterior"):
 

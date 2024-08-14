@@ -6,7 +6,7 @@ from tgm.agents.debug.Debugger import Debugger
 from tgm.environments.MazeEnv import MazeEnv
 
 
-def run(maze_index=8, max_episode_length=50, debug=True):
+def run_training(maze_index=27, max_episode_length=50, debug=True):
 
     # Create the maze environment.
     path = join(env_vars["DATA_DIRECTORY"], "mazes", f"maze_{maze_index}.txt")
@@ -22,4 +22,4 @@ def run(maze_index=8, max_episode_length=50, debug=True):
 
 
 if __name__ == '__main__':
-    run()
+    run_training()

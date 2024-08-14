@@ -1,0 +1,47 @@
+from os import environ as env_vars
+from os.path import join
+
+
+def generate_maze_figure(maze_index=26, x_shift=0, y_shift=0):
+    """
+    Display the latex code required to create a figure of the maze
+    """
+
+    # Create the maze environment.
+    maze_path = join(env_vars["DATA_DIRECTORY"], "mazes", f"maze_{maze_index}.txt")
+
+    print("	\\begin{figure}[H]")
+    print("		\\begin{center}")
+    print("			\\begin{tikzpicture}[scale=0.03, every node/.style={scale=0.03}]")
+
+    # Load the maze from the file.
+    with open(maze_path, "r") as f:
+
+        # Load the maze data, number of rows and columns.
+        maze_data = f.readlines()
+        n_rows, n_columns = maze_data[0].split(" ")
+        n_rows = int(n_rows)
+        n_columns = int(n_columns)
+
+        # Turn the maze data into a list.
+        for row in range(n_rows):
+            for column in range(n_columns):
+                x = str(x_shift + column * 10)
+                y = str(y_shift + row * 10)
+                if maze_data[row + 1][column] == "W":
+                    print("			    \\node at (" + x + ", " + y + ") (x2) {\\includegraphics[width=290px]{figures/wall.png}};")
+                if maze_data[row + 1][column] == "S":
+                    print("			    \\node at (" + x + ", " + y + ") (x2) {\\includegraphics[width=290px]{figures/mouse.png}};")
+                if maze_data[row + 1][column] == "E":
+                    print("			    \\node at (" + x + ", " + y + ") (x2) {\\includegraphics[width=290px]{figures/chesse.png}};")
+
+    print("			\\end{tikzpicture}")
+    print("		\\end{center}")
+    print("		\\vspace{-0.75cm}")
+    print("		\\caption{}")
+    print("		\\label{fig:mazes}")
+    print("	\\end{figure}")
+
+
+if __name__ == '__main__':
+    generate_maze_figure()

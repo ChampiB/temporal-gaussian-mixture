@@ -14,7 +14,7 @@ class PlannerView:
         rewards = []
         dones = []
         for i in range(len(self.dataset.x) - 1):
-            if self.dataset.d[i] is False:
+            if self.dataset.d[i] is False and self.dataset.ignore_next[i] is False:
                 actions.append(self.dataset.a[i])
                 states.append(r_hat[i])
                 rewards.append(self.dataset.r[i + 1])

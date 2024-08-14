@@ -1,0 +1,49 @@
+from functools import partial
+from os import environ as env_vars
+from os.path import join
+
+from tgm.agents.StableBaselineAgent import StableBaselineAgent
+from tgm.agents.TemporalGaussianMixture import TemporalGaussianMixture
+from tgm.environments.MazeEnv import MazeEnv
+from stable_baselines3.common.monitor import Monitor
+
+
+def compare_approaches(maze_index=8, model_name="tgm", max_episode_length=50, run_id=2):
+
+    # Create the maze environment.
+    path = join(env_vars["DATA_DIRECTORY"], "mazes", f"maze_{maze_index}.txt")
+    env = MazeEnv(path, max_episode_length)
+    env = Monitor(env)
+
+    # Create the temporal Gaussian mixture model.
+
+    checkpoint_dir = join(env_vars["DATA_DIRECTORY"], "saves", f"maze_{maze_index}", model_name, f"{run_id}")
+    tensorboard_dir = join(env_vars["DATA_DIRECTORY"], "runs", f"maze_{maze_index}", model_name, f"{run_id}")
+    models = {
+        "tgm": partial(TemporalGaussianMixture, tensorboard_dir, action_selection="epsilon_greedy"),
+        "dqn": partial(StableBaselineAgent, "dqn", tensorboard_dir, checkpoint_dir, learning_starts=0, learning_rate=0.01, target_update_interval=100, exploration_fraction=0.7),
+        "ppo": partial(StableBaselineAgent, "ppo", tensorboard_dir, checkpoint_dir),
+        "a2c": partial(StableBaselineAgent, "a2c", tensorboard_dir, checkpoint_dir, learning_rate=0.0001),
+        "sac": partial(StableBaselineAgent, "sac", tensorboard_dir, checkpoint_dir),  # Continuous action space
+        "td3": partial(StableBaselineAgent, "td3", tensorboard_dir, checkpoint_dir),  # Continuous action space
+        "ddpg": partial(StableBaselineAgent, "ddpg", tensorboard_dir, checkpoint_dir),  # Continuous action space
+    }
+    model = models[model_name]()
+
+    # Train the agent on the environment.
+    config = {
+        "max_n_steps": 5000,
+        "tensorboard.log_interval": 1,
+        "checkpoint_dir": checkpoint_dir,
+        "checkpoint.frequency": 1000,
+        "task.name": "training"
+    }
+    model.train(env, config=config)
+
+
+if __name__ == '__main__':
+    for run in [1, 2, 3, 4, 5]:
+        for maze in [8, 10, 20, 25, 26, 27]:
+            for model in ["a2c"]:  # TODO "tgm", "dqn",
+                print(f"run[{run}], maze[{maze}], model[{model}]")
+                compare_approaches(run_id=run, maze_index=maze, model_name=model)

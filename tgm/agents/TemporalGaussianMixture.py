@@ -1,5 +1,6 @@
 import random
 
+from tgm.agents.AgentInterface import AgentInterface
 from tgm.agents.datasets.Dataset import Dataset
 from tgm.agents.datasets.GaussianMixtureView import GaussianMixtureView
 from tgm.agents.datasets.PlannerView import PlannerView
@@ -9,13 +10,22 @@ from tgm.agents.models.TemporalModel import TemporalModel
 from tgm.agents.planners.QLearning import QLearning
 
 
-class TemporalGaussianMixture:
+class TemporalGaussianMixture(AgentInterface):
 
-    def __init__(self, action_selection="softmax", n_states=10, n_observations=2, n_actions=5, learning_interval=100):
+    def __init__(
+        self, tensorboard_dir, action_selection="softmax",
+        n_states=10, n_observations=2, n_actions=5, learning_interval=100
+    ):
 
-        # Store the frequency at which learning is performed, the number of actions, and the number of step done.
+        # Call parent constructor.
+        super().__init__(tensorboard_dir, 0)
+
+        # Store the frequency at which learning is performed, and the number of actions.
         self.learning_interval = learning_interval
         self.n_actions = n_actions
+
+        # Store the total reward obtained and the number of steps done so far.
+        self.total_rewards = 0
         self.steps_done = 0
 
         # Create the perception and temporal models, as well as the action selection strategy.
@@ -29,7 +39,28 @@ class TemporalGaussianMixture:
         self.tm_data = TemporalModelView(self.dataset)
         self.planner_data = PlannerView(self.dataset)
 
-    def train(self, env, debugger=None):
+    def name(self):
+        """
+        Getter
+        :return: the agent's name
+        """
+        return "tgm"
+
+    def n_steps_done(self):
+        """
+        Getter
+        :return: the number of training steps performed to date
+        """
+        return self.steps_done
+
+    def total_rewards_obtained(self):
+        """
+        Getter
+        :return: the total number of rewards gathered to date
+        """
+        return self.total_rewards
+
+    def train(self, env, debugger=None, config=None):
 
         # Retrieve the initial observation from the environment.
         obs = env.reset()
@@ -37,7 +68,8 @@ class TemporalGaussianMixture:
 
         # Train the agent.
         self.steps_done = 0
-        while self.steps_done <= 5000:
+        max_n_steps = 5000 if config is None else config["max_n_steps"]
+        while self.steps_done <= max_n_steps:
 
             # Select the next action, and execute it in the environment.
             action = self.step(obs)
@@ -47,6 +79,13 @@ class TemporalGaussianMixture:
             # If required, perform one iteration of training.
             if self.steps_done > 0 and self.steps_done % self.learning_interval == 0:
                 self.learn(debugger)
+
+            # Log the reward (if needed).
+            if self.writer is not None:
+                self.total_rewards += reward
+                if self.steps_done % config["tensorboard.log_interval"] == 0:
+                    self.writer.add_scalar("total_rewards", self.total_rewards, self.steps_done)
+                    self.log_episode_info(info, config["task.name"])
 
             # Reset the environment when a trial ends.
             if done:
@@ -82,19 +121,25 @@ class TemporalGaussianMixture:
 
         # Fit the Gaussian mixture and temporal model.
         gm_x_forget, gm_x_keep = self.gm_data.get(split=True)
-        debugger.before("gm_fit", auto_index=True)
+        if debugger is not None:
+            debugger.before("gm_fit", auto_index=True)
         self.gm.fit(gm_x_forget, gm_x_keep, debugger)
-        debugger.after("gm_fit")
+        if debugger is not None:
+            debugger.after("gm_fit")
         tm_x_forget, tm_x_keep = self.tm_data.get(self.gm, split=True)
-        debugger.before("tm_fit", auto_index=True)
+        if debugger is not None:
+            debugger.before("tm_fit", auto_index=True)
         self.tm.fit(self.gm, tm_x_forget, tm_x_keep)
-        debugger.after("tm_fit")
+        if debugger is not None:
+            debugger.after("tm_fit")
 
         # Update the Q-values.
-        debugger.before("planner_fit", auto_index=True)
+        if debugger is not None:
+            debugger.before("planner_fit", auto_index=True)
         planner_x = self.planner_data.get(self.gm)
         self.planner.fit(planner_x, self.gm, self.tm.B())
-        debugger.after("planner_fit")
+        if debugger is not None:
+            debugger.after("planner_fit")
 
         # Update the components which are considered fixed.
         self.gm.update_fixed_components(debugger)

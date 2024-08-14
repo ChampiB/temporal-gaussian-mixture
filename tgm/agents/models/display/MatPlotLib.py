@@ -360,11 +360,12 @@ class MatPlotLib:
         return fig
 
     @staticmethod
-    def draw_matrix(matrix, title="", draw_values=True, log_scale=False, mask=None, y_ticks=None):
+    def draw_matrix(matrix, title="", draw_values=True, log_scale=False, mask=None, y_ticks=None, fig_size=None):
 
         # Create a figure.
-        fig = plt.figure()
+        fig = plt.figure(figsize=fig_size)
         plt.gca().set_title(title)
+        plt.subplots_adjust(left=0.1, right=0.9, top=0.9, bottom=0.1)
 
         # Draw the matrix passed as parameters.
         if log_scale is True:

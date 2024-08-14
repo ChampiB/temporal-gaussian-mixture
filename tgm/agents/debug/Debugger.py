@@ -50,7 +50,7 @@ class Debugger:
         if self.debug is False:
             return
 
-        # Create and run the debugger's graphical user interface.
+        # Create and run_training the debugger's graphical user interface.
         gui = DebuggerGUI(self.data, self.checkpoints, env.action_names)
         gui.run()
 

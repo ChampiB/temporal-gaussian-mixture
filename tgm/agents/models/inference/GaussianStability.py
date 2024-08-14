@@ -10,9 +10,10 @@ from tgm.agents.models.inference.GaussianMixture import GaussianMixture as GMix
 
 class GaussianStability:
 
-    def __init__(self, kl_threshold=0.5, n_steps_threshold=4):
+    def __init__(self, kl_threshold=0.5, n_steps_threshold=4, min_n_steps_threshold=4):
         self.kl_threshold = kl_threshold
         self.n_steps_threshold = n_steps_threshold
+        self.min_n_steps_threshold = min_n_steps_threshold
         self.fixed_components = []
         self.fixed_n_steps = None
         self.β_hat = self.d_hat = self.m_hat = self.W_hat = self.v_hat = self.N = None
@@ -72,7 +73,7 @@ class GaussianStability:
 
         # Update number of steps for which components have remained fixed, and the list of fixed components.
         self.fixed_n_steps, self.fixed_components = self.compute_fixed_n_steps(
-            self.fixed_n_steps, self.N, self.m_hat, self.W_hat, self.v_hat, gm.N, gm.m_hat, gm.W_hat, gm.v_hat
+            self.fixed_n_steps, self.m_hat, self.W_hat, self.v_hat, gm.m_hat, gm.W_hat, gm.v_hat
         )
 
         # Keep track of the (old) posterior's parameters.
@@ -80,7 +81,7 @@ class GaussianStability:
             GMix.clone(gm.v_hat, gm.d_hat, gm.β_hat, gm.m_hat, gm.W_hat)
         self.N = gm.N.clone()
 
-    def compute_fixed_n_steps(self, fixed_n_steps_0, N0, m0, W0, v0, N1, m1, W1, v1):
+    def compute_fixed_n_steps(self, fixed_n_steps_0, m0, W0, v0, m1, W1, v1):
 
         # Initialize the new list of fixed component, and the number of steps for each fixed Gaussian component.
         fixed_n_steps_1 = torch.ones_like(v1)
@@ -88,9 +89,14 @@ class GaussianStability:
             return fixed_n_steps_1, self.fixed_components
         fixed_components_1 = []
 
+        # Retrieve the component indices in increasing order, based on the number of steps they have been observed.
+        counts = [(i, fixed_n_steps_0[i]) for i in range(fixed_n_steps_0.shape[0])]
+        ks = [k for k, count in sorted(counts, key=lambda item: item[1])]
+
         # Iterate over all pairs of new and old states.
+        new_fixed_component = False
         js_assigned = []
-        for k in range(v0.shape[0]):
+        for k in reversed(ks):
             precision0 = W0[k] * v0[k]
 
             # Compute the smallest KL-divergence, between the k-th (old) components, and the new components.
@@ -115,9 +121,15 @@ class GaussianStability:
                 fixed_n_steps_1[min_j] += fixed_n_steps_0[k]
                 js_assigned.append(min_j)
 
-                # If this component was fixed or the number of steps is greater than the threshold,
+                # If this component was fixed or the number of steps is greater than the threshold or another component
+                # already became fixed and the number of steps is greater than the minimal threshold,
                 # add the component to the fixed components.
-                if k in self.fixed_components or fixed_n_steps_1[min_j] > self.n_steps_threshold:
+                if (
+                    k in self.fixed_components or
+                    fixed_n_steps_1[min_j] > self.n_steps_threshold or
+                    (new_fixed_component and fixed_n_steps_1[min_j] > self.min_n_steps_threshold)
+                ):
+                    new_fixed_component = True
                     if min_j not in fixed_components_1:
                         fixed_components_1.append(min_j)
 
@@ -192,7 +204,7 @@ class GaussianStability:
         return self.fixed_components
 
     def clone(self):
-        gs = GaussianStability(self.kl_threshold, self.n_steps_threshold)
+        gs = GaussianStability(self.kl_threshold, self.n_steps_threshold, self.min_n_steps_threshold)
         gs.fixed_components = deepcopy(self.fixed_components)
         gs.fixed_n_steps = None if self.fixed_n_steps is None else self.fixed_n_steps.clone()
         gs.m_hat = None if self.m_hat is None else [m_k.clone() for m_k in self.m_hat]

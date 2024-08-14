@@ -1,0 +1,178 @@
+from os import environ as env_vars
+import glob
+import os.path
+import re
+import logging
+import matplotlib.pyplot as plt
+from tgm.helpers.TensorBoard import TensorBoard
+import pandas as pd
+import seaborn as sns
+from tgm.helpers.MatPlotLib import MatPlotLib
+
+
+def try_int(s):
+    """
+    If the given string contains an integer, convert it to an integer, else return a string
+    :param s: the string to process
+    :return: the converted integer if s only contained decimal characters, otherwise the initial string
+    """
+    try:
+        return int(s)
+    except ValueError:
+        return s
+
+
+def natural_sort(s):
+    """
+    Turn a string into a list of string and number chunks, e.g., natural_sort("z23a") -> ["z", 23, "a"]
+    :param s: the string to process
+    :return: a list of string and number chunks
+    """
+    return [try_int(c) for c in re.split('([0-9]+)', s)]
+
+
+def get_model_directories(model_dir):
+    """
+    Get the model directories accounting for the task used for training the agent
+    :param model_dir: the directory in which all the models are stored
+    :return: the list of directories whose tensorboard event file must be loaded
+    """
+    return glob.glob(f"{model_dir}/*/")
+
+
+def draw_model_performance(model_dir, ax, jump, values_name, scalar_name, min_n_steps, max_n_steps, max_y_axis, overwrite, df_path_prefix):
+    """
+    Draw the performance of the model
+    :param jump: number of training iteration between any two x-values in the output graph
+    :param model_dir: the path to the directory containing the training logs of the model
+    :param ax: the axis on which to draw the model performance
+    :return: the new axis to use for drawing the next model performance
+    """
+
+    # Retrieve the path to the dataframe where the tensorboard scores should be saved.
+    agent_name = model_dir.split('/')[-2]
+    df_path = f"{df_path_prefix}_{agent_name}.tsv"
+
+    # Load all the log data from the file system.
+    if os.path.exists(df_path) and overwrite is False:
+        logging.info(f"{df_path} exists, using already computed logs from tensorboard.")
+        rewards = pd.read_csv(df_path, sep="\t")
+    else:
+        logging.info(f"{df_path} not found, getting logs from tensorboard.")
+        directories = get_model_directories(model_dir)
+        rewards = TensorBoard.load_log_directories(directories, df_path, values_name, scalar_name)
+
+    # Return if the dataframe is empty.
+    if rewards.empty:
+        return ax
+
+    # Filter only the relevant rewards and group them by training iteration.
+    rewards = rewards[rewards[values_name] <= max_y_axis]
+    rewards = rewards[rewards["Steps"] >= min_n_steps]
+    rewards = rewards[rewards["Steps"] <= max_n_steps]
+    agg_rewards = rewards.groupby("Steps", as_index=False)
+
+    # Compute the lower and upper bound based on mean and standard deviation.
+    mean_rewards = agg_rewards.mean()
+    logging.info(mean_rewards)
+    mean_rewards = mean_rewards[mean_rewards.index % jump == 0]
+    logging.info(mean_rewards)
+
+    std_rewards = agg_rewards.std()
+    std_rewards = std_rewards[std_rewards.index % jump == 0]
+
+    lower_bound = mean_rewards - std_rewards
+    upper_bound = mean_rewards + std_rewards
+
+    # Draw the mean reward as a solid curve, and the standard deviation as the shaded area.
+    ax = sns.lineplot(mean_rewards, x="Steps", y=values_name, ax=ax)
+    plt.fill_between(
+        mean_rewards.Steps.unique(),
+        lower_bound[values_name].values,
+        upper_bound[values_name].values,
+        alpha=0.1
+    )
+    return ax
+
+
+def format_label(label):
+    """
+    Format the label passed as input to make pretty in the graph
+    :return: the formatted label
+    """
+    return label.upper()
+
+
+def instantiate_model_dirs(directory, agents):
+    """
+    Create a list of model directories
+    :param directory: the directory in which the models are stored
+    :param agents: the agent names
+    :return: the list of model directories
+    """
+    return [directory + "*/"] if len(agents) == 0 else [directory + f"{agent}/" for agent in agents]
+
+
+def draw_performance_graph(monitored_quantity="reward", maze_index=25):
+    """
+    Computes the mean and standard deviation of an agent's performance for a specific environment.
+    """
+
+    # Hyperparameters.
+    min_n_steps = 0
+    max_n_steps = 4975
+    max_y_axis = 0
+    overwrite = False
+    jump = 1
+    environment_name = f"maze_{maze_index}"
+    model_dirs = instantiate_model_dirs(env_vars["DATA_DIRECTORY"] + f"runs/{environment_name}/", [])
+    df_path_prefix = env_vars["DATA_DIRECTORY"] + f"runs/{environment_name}/training_{monitored_quantity}_"
+
+    # Store the task's parameters.
+    df_path_prefix = f"{df_path_prefix}{environment_name.replace('/', '_')}"
+    figure_path = f"{df_path_prefix}.pdf"
+    event_names_map = {
+        "reward": ("Rewards", "rollout/ep_rew_mean"),
+        "vfe": ("Variational Free Energy", "vfe"),
+        "total_reward": ("Total Rewards", "total_rewards"),
+    }
+    values_name, scalar_name = event_names_map[monitored_quantity]
+
+    # model_dirs is either a list of specific (environment,agent) to monitor or a starred expression.
+    # For example, model_dirs could be ["run/d_sprites/baseline_dqn", "run/d_sprites/baseline_ppo"], or
+    # ["run/d_sprites/*/"], where the latest will select all the runs logged for the d_sprites environment.
+    if len(model_dirs) == 1:
+        model_dirs = glob.glob(model_dirs[0])
+    print("model_dirs: ", model_dirs)
+
+    # Create the matplotlib axis, and the labels for the legend.
+    ax = None
+
+    # Format the agent names.
+    labels = [format_label(path.split("/")[-2]) for path in model_dirs]
+    print("labels: ", labels)
+
+    # Draw the performance of all the models.
+    for model_dir in model_dirs:
+
+        # Draw the performance of the model described by the path.
+        logging.info(f"Plotting curve for {model_dir}")
+        ax = draw_model_performance(
+            model_dir, ax, jump, values_name, scalar_name,
+            min_n_steps, max_n_steps, max_y_axis, overwrite, df_path_prefix
+        )
+
+    # Set the legend of the figure, and the axis labels with labels sorted in natural order.
+    handles, labels = list(zip(*sorted(zip(*[ax.lines, labels]), key=lambda x: natural_sort(x[1]))))
+    ax.legend(handles=handles, labels=labels)
+    ax.set_xlabel("Training Iterations")
+    ax.set_ylabel(values_name)
+
+    # Save the full figure, comparing the agents.
+    plt.tight_layout()
+    plt.savefig(figure_path, dpi=300, transparent=True)
+    MatPlotLib.close()
+
+
+if __name__ == '__main__':
+    draw_performance_graph()

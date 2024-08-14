@@ -79,4 +79,4 @@ class QLearning:
         if self.q_values is None:
             return MatPlotLib.draw_text(f"Matrix cannot be generated because \n q-values are none.")
 
-        return MatPlotLib.draw_matrix(self.q_values, title=f"Q-values.", y_ticks=action_names)
+        return MatPlotLib.draw_matrix(self.q_values, title=f"Q-values.", y_ticks=action_names, fig_size=[12.8, 9.6])
