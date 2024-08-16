@@ -1,3 +1,1 @@
 Temporal Gaussian Mixture
-
-Test
